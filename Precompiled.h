@@ -1,0 +1,36 @@
+#if defined __cplusplus
+#include <algorithm>
+#include <iostream>
+#include <vector>
+#include <QApplication>
+#include <QComboBox>
+#include <QDate>
+#include <QDateTime>
+#include <QDateEdit>
+#include <QDateTimeEdit>
+#include <QDoubleSpinBox>
+#include <QFile>
+#include <QLabel>
+#include <QList>
+#include <QMap>
+#include <QPushButton>
+#include <QQueue>
+#include <QtConcurrent>
+#include <QtGui>
+#include <QtSql>
+#include <QSqlDatabase>
+#include <QSqlQuery>
+#include <QString>
+#include <QStringList>
+#include <QTextStream>
+#include <QThread>
+#include <QTime>
+#include <QWidget>
+#include <QVariantList>
+#include <QVector>
+#include <QXmlStreamReader>
+#include "BarDataList.h"
+#include "SearchResultWriter.h"
+#include "ThresholdParameters.h"
+#include "XmlConfigHandler.h"
+#endif

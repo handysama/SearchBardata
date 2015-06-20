@@ -1,0 +1,882 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>ThresholdParameters</class>
+ <widget class="QDialog" name="ThresholdParameters">
+  <property name="windowModality">
+   <enum>Qt::NonModal</enum>
+  </property>
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>480</width>
+    <height>280</height>
+   </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
+  </property>
+  <property name="windowTitle">
+   <string>Resistance and Support Parameters</string>
+  </property>
+  <property name="windowOpacity">
+   <double>1.000000000000000</double>
+  </property>
+  <property name="sizeGripEnabled">
+   <bool>true</bool>
+  </property>
+  <widget class="QPushButton" name="btnSave">
+   <property name="geometry">
+    <rect>
+     <x>200</x>
+     <y>250</y>
+     <width>71</width>
+     <height>23</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Save</string>
+   </property>
+  </widget>
+  <widget class="QTabWidget" name="tabWidget">
+   <property name="geometry">
+    <rect>
+     <x>5</x>
+     <y>5</y>
+     <width>470</width>
+     <height>241</height>
+    </rect>
+   </property>
+   <property name="currentIndex">
+    <number>0</number>
+   </property>
+   <widget class="QWidget" name="tab">
+    <attribute name="title">
+     <string>Support/Resistance</string>
+    </attribute>
+    <widget class="QGroupBox" name="groupBox">
+     <property name="geometry">
+      <rect>
+       <x>190</x>
+       <y>10</y>
+       <width>181</width>
+       <height>201</height>
+      </rect>
+     </property>
+     <property name="title">
+      <string>Intersect Parameters</string>
+     </property>
+     <widget class="QLabel" name="label_12">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>55</y>
+        <width>55</width>
+        <height>13</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Weekly</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_9">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>144</y>
+        <width>55</width>
+        <height>13</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>5min</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_8">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>24</y>
+        <width>55</width>
+        <height>13</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Monthly</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_11">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>115</y>
+        <width>55</width>
+        <height>13</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>60min</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_10">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>85</y>
+        <width>55</width>
+        <height>13</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Daily</string>
+      </property>
+     </widget>
+     <widget class="QSpinBox" name="vWeekly">
+      <property name="geometry">
+       <rect>
+        <x>70</x>
+        <y>50</y>
+        <width>70</width>
+        <height>22</height>
+       </rect>
+      </property>
+      <property name="buttonSymbols">
+       <enum>QAbstractSpinBox::NoButtons</enum>
+      </property>
+     </widget>
+     <widget class="QSpinBox" name="vMonthly">
+      <property name="geometry">
+       <rect>
+        <x>70</x>
+        <y>20</y>
+        <width>70</width>
+        <height>22</height>
+       </rect>
+      </property>
+      <property name="buttonSymbols">
+       <enum>QAbstractSpinBox::NoButtons</enum>
+      </property>
+     </widget>
+     <widget class="QSpinBox" name="v5min">
+      <property name="geometry">
+       <rect>
+        <x>70</x>
+        <y>140</y>
+        <width>70</width>
+        <height>22</height>
+       </rect>
+      </property>
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
+      <property name="buttonSymbols">
+       <enum>QAbstractSpinBox::NoButtons</enum>
+      </property>
+     </widget>
+     <widget class="QSpinBox" name="vDaily">
+      <property name="geometry">
+       <rect>
+        <x>70</x>
+        <y>80</y>
+        <width>70</width>
+        <height>22</height>
+       </rect>
+      </property>
+      <property name="buttonSymbols">
+       <enum>QAbstractSpinBox::NoButtons</enum>
+      </property>
+     </widget>
+     <widget class="QSpinBox" name="v60min">
+      <property name="geometry">
+       <rect>
+        <x>70</x>
+        <y>110</y>
+        <width>70</width>
+        <height>22</height>
+       </rect>
+      </property>
+      <property name="buttonSymbols">
+       <enum>QAbstractSpinBox::NoButtons</enum>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_13">
+      <property name="geometry">
+       <rect>
+        <x>148</x>
+        <y>24</y>
+        <width>20</width>
+        <height>13</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>(2)</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_14">
+      <property name="geometry">
+       <rect>
+        <x>148</x>
+        <y>55</y>
+        <width>20</width>
+        <height>13</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>(3)</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_15">
+      <property name="geometry">
+       <rect>
+        <x>148</x>
+        <y>85</y>
+        <width>20</width>
+        <height>13</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>(5)</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_16">
+      <property name="geometry">
+       <rect>
+        <x>148</x>
+        <y>115</y>
+        <width>20</width>
+        <height>13</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>(9)</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_17">
+      <property name="geometry">
+       <rect>
+        <x>148</x>
+        <y>144</y>
+        <width>20</width>
+        <height>13</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>(20)</string>
+      </property>
+     </widget>
+    </widget>
+    <widget class="QGroupBox" name="groupBox_2">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>10</y>
+       <width>171</width>
+       <height>201</height>
+      </rect>
+     </property>
+     <property name="title">
+      <string>Refresh Parameters</string>
+     </property>
+     <widget class="QLabel" name="label_7">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>170</y>
+        <width>70</width>
+        <height>13</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Threshold 5</string>
+      </property>
+     </widget>
+     <widget class="QDoubleSpinBox" name="sbValueB2">
+      <property name="geometry">
+       <rect>
+        <x>90</x>
+        <y>76</y>
+        <width>70</width>
+        <height>22</height>
+       </rect>
+      </property>
+      <property name="buttonSymbols">
+       <enum>QAbstractSpinBox::NoButtons</enum>
+      </property>
+      <property name="decimals">
+       <number>3</number>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_6">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>141</y>
+        <width>70</width>
+        <height>13</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Threshold 4</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_3">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>50</y>
+        <width>70</width>
+        <height>13</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Threshold 1</string>
+      </property>
+     </widget>
+     <widget class="QDoubleSpinBox" name="sbValueB3">
+      <property name="geometry">
+       <rect>
+        <x>90</x>
+        <y>106</y>
+        <width>70</width>
+        <height>22</height>
+       </rect>
+      </property>
+      <property name="buttonSymbols">
+       <enum>QAbstractSpinBox::NoButtons</enum>
+      </property>
+      <property name="decimals">
+       <number>3</number>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_5">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>111</y>
+        <width>70</width>
+        <height>13</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Threshold 3</string>
+      </property>
+     </widget>
+     <widget class="QDoubleSpinBox" name="sbValueB4">
+      <property name="geometry">
+       <rect>
+        <x>90</x>
+        <y>136</y>
+        <width>70</width>
+        <height>22</height>
+       </rect>
+      </property>
+      <property name="buttonSymbols">
+       <enum>QAbstractSpinBox::NoButtons</enum>
+      </property>
+      <property name="decimals">
+       <number>3</number>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>20</y>
+        <width>47</width>
+        <height>13</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Symbol</string>
+      </property>
+     </widget>
+     <widget class="QDoubleSpinBox" name="sbValueB1">
+      <property name="geometry">
+       <rect>
+        <x>90</x>
+        <y>46</y>
+        <width>70</width>
+        <height>22</height>
+       </rect>
+      </property>
+      <property name="buttonSymbols">
+       <enum>QAbstractSpinBox::NoButtons</enum>
+      </property>
+      <property name="decimals">
+       <number>3</number>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_4">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>81</y>
+        <width>70</width>
+        <height>13</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Threshold 2</string>
+      </property>
+     </widget>
+     <widget class="QComboBox" name="cbSymbol">
+      <property name="geometry">
+       <rect>
+        <x>90</x>
+        <y>16</y>
+        <width>70</width>
+        <height>22</height>
+       </rect>
+      </property>
+     </widget>
+     <widget class="QDoubleSpinBox" name="sbValueB5">
+      <property name="geometry">
+       <rect>
+        <x>90</x>
+        <y>166</y>
+        <width>70</width>
+        <height>22</height>
+       </rect>
+      </property>
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
+      <property name="buttonSymbols">
+       <enum>QAbstractSpinBox::NoButtons</enum>
+      </property>
+      <property name="decimals">
+       <number>3</number>
+      </property>
+     </widget>
+    </widget>
+   </widget>
+   <widget class="QWidget" name="tab_2">
+    <attribute name="title">
+     <string>MACD</string>
+    </attribute>
+    <widget class="QDoubleSpinBox" name="doubleSpinBox">
+     <property name="geometry">
+      <rect>
+       <x>160</x>
+       <y>10</y>
+       <width>62</width>
+       <height>22</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QComboBox" name="comboBox">
+     <property name="geometry">
+      <rect>
+       <x>80</x>
+       <y>10</y>
+       <width>69</width>
+       <height>22</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_2">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>10</y>
+       <width>71</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Threshold 1</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_18">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>40</y>
+       <width>71</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Threshold 2</string>
+     </property>
+    </widget>
+    <widget class="QComboBox" name="comboBox_2">
+     <property name="geometry">
+      <rect>
+       <x>80</x>
+       <y>40</y>
+       <width>69</width>
+       <height>22</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QDoubleSpinBox" name="doubleSpinBox_2">
+     <property name="geometry">
+      <rect>
+       <x>160</x>
+       <y>40</y>
+       <width>62</width>
+       <height>22</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_19">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>70</y>
+       <width>71</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Threshold 3</string>
+     </property>
+    </widget>
+    <widget class="QComboBox" name="comboBox_3">
+     <property name="geometry">
+      <rect>
+       <x>80</x>
+       <y>70</y>
+       <width>69</width>
+       <height>22</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QDoubleSpinBox" name="doubleSpinBox_3">
+     <property name="geometry">
+      <rect>
+       <x>160</x>
+       <y>70</y>
+       <width>62</width>
+       <height>22</height>
+      </rect>
+     </property>
+    </widget>
+   </widget>
+   <widget class="QWidget" name="tab_3">
+    <attribute name="title">
+     <string>RSI</string>
+    </attribute>
+    <widget class="QLabel" name="label_22">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>40</y>
+       <width>71</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Threshold 2</string>
+     </property>
+    </widget>
+    <widget class="QDoubleSpinBox" name="doubleSpinBox_6">
+     <property name="geometry">
+      <rect>
+       <x>160</x>
+       <y>10</y>
+       <width>62</width>
+       <height>22</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_20">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>10</y>
+       <width>71</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Threshold 1</string>
+     </property>
+    </widget>
+    <widget class="QComboBox" name="comboBox_6">
+     <property name="geometry">
+      <rect>
+       <x>80</x>
+       <y>40</y>
+       <width>69</width>
+       <height>22</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_21">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>70</y>
+       <width>71</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Threshold 3</string>
+     </property>
+    </widget>
+    <widget class="QComboBox" name="comboBox_5">
+     <property name="geometry">
+      <rect>
+       <x>80</x>
+       <y>70</y>
+       <width>69</width>
+       <height>22</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QDoubleSpinBox" name="doubleSpinBox_4">
+     <property name="geometry">
+      <rect>
+       <x>160</x>
+       <y>70</y>
+       <width>62</width>
+       <height>22</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QDoubleSpinBox" name="doubleSpinBox_5">
+     <property name="geometry">
+      <rect>
+       <x>160</x>
+       <y>40</y>
+       <width>62</width>
+       <height>22</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QComboBox" name="comboBox_4">
+     <property name="geometry">
+      <rect>
+       <x>80</x>
+       <y>10</y>
+       <width>69</width>
+       <height>22</height>
+      </rect>
+     </property>
+    </widget>
+   </widget>
+   <widget class="QWidget" name="tab_4">
+    <attribute name="title">
+     <string>SlowK</string>
+    </attribute>
+    <widget class="QLabel" name="label_25">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>40</y>
+       <width>71</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Threshold 2</string>
+     </property>
+    </widget>
+    <widget class="QDoubleSpinBox" name="doubleSpinBox_8">
+     <property name="geometry">
+      <rect>
+       <x>160</x>
+       <y>40</y>
+       <width>62</width>
+       <height>22</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_24">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>70</y>
+       <width>71</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Threshold 3</string>
+     </property>
+    </widget>
+    <widget class="QComboBox" name="comboBox_9">
+     <property name="geometry">
+      <rect>
+       <x>80</x>
+       <y>40</y>
+       <width>69</width>
+       <height>22</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_23">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>10</y>
+       <width>71</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Threshold 1</string>
+     </property>
+    </widget>
+    <widget class="QDoubleSpinBox" name="doubleSpinBox_9">
+     <property name="geometry">
+      <rect>
+       <x>160</x>
+       <y>10</y>
+       <width>62</width>
+       <height>22</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QDoubleSpinBox" name="doubleSpinBox_7">
+     <property name="geometry">
+      <rect>
+       <x>160</x>
+       <y>70</y>
+       <width>62</width>
+       <height>22</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QComboBox" name="comboBox_7">
+     <property name="geometry">
+      <rect>
+       <x>80</x>
+       <y>10</y>
+       <width>69</width>
+       <height>22</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QComboBox" name="comboBox_8">
+     <property name="geometry">
+      <rect>
+       <x>80</x>
+       <y>70</y>
+       <width>69</width>
+       <height>22</height>
+      </rect>
+     </property>
+    </widget>
+   </widget>
+   <widget class="QWidget" name="tab_5">
+    <attribute name="title">
+     <string>SlowD</string>
+    </attribute>
+    <widget class="QLabel" name="label_28">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>40</y>
+       <width>71</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Threshold 2</string>
+     </property>
+    </widget>
+    <widget class="QComboBox" name="comboBox_12">
+     <property name="geometry">
+      <rect>
+       <x>80</x>
+       <y>40</y>
+       <width>69</width>
+       <height>22</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_26">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>10</y>
+       <width>71</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Threshold 1</string>
+     </property>
+    </widget>
+    <widget class="QDoubleSpinBox" name="doubleSpinBox_10">
+     <property name="geometry">
+      <rect>
+       <x>160</x>
+       <y>70</y>
+       <width>62</width>
+       <height>22</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QDoubleSpinBox" name="doubleSpinBox_11">
+     <property name="geometry">
+      <rect>
+       <x>160</x>
+       <y>40</y>
+       <width>62</width>
+       <height>22</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_27">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>70</y>
+       <width>71</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Threshold 3</string>
+     </property>
+    </widget>
+    <widget class="QComboBox" name="comboBox_11">
+     <property name="geometry">
+      <rect>
+       <x>80</x>
+       <y>70</y>
+       <width>69</width>
+       <height>22</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QComboBox" name="comboBox_10">
+     <property name="geometry">
+      <rect>
+       <x>80</x>
+       <y>10</y>
+       <width>69</width>
+       <height>22</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QDoubleSpinBox" name="doubleSpinBox_12">
+     <property name="geometry">
+      <rect>
+       <x>160</x>
+       <y>10</y>
+       <width>62</width>
+       <height>22</height>
+      </rect>
+     </property>
+    </widget>
+   </widget>
+  </widget>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
