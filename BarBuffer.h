@@ -83,10 +83,12 @@ class BarBuffer {
   void initialize(int CacheSize);
 
   int maxReactSupport(const int &index, const double &b, const double &r, const int &scope, const int &threshold,
-    QVariantList *v_value, QVariantList *v_date, QVariantList *v_time, QVariantList *v_rcount, QVariantList *v_duration, QVector<QVariantList>* ReactList,QVariantList* LastDuration);
+    QVariantList *v_value, QVariantList *v_date, QVariantList *v_time, QVariantList *v_rcount, QVariantList *v_duration,
+    QVector<QVariantList>* ReactList,QVariantList* LastDuration, QVariantList *FirstDuration);
 
   int maxReactResistance(const int &index, const double &b, const double &r, const int &scope, const int &threshold,
-    QVariantList *v_value, QVariantList *v_date, QVariantList *v_time, QVariantList *v_rcount, QVariantList *v_duration, QVector<QVariantList>* ReactList,QVariantList* LastDuration);
+    QVariantList *v_value, QVariantList *v_date, QVariantList *v_time, QVariantList *v_rcount, QVariantList *v_duration,
+    QVector<QVariantList>* ReactList, QVariantList* LastDuration, QVariantList *FirstDuration);
 
   void DBResistanceSupportGen(const QSqlDatabase &db, const double &b, const double &r,
     const int &threshold, const int &start_rowid_from, const int &id_threshold);
@@ -96,11 +98,11 @@ class BarBuffer {
 
   void insert_resistance_detail(QSqlQuery *query, const QDate &date_, const QTime &time_,
     const QVariantList &rdate, const QVariantList &rtime, const QVariantList &v_value, const QVariantList &v_rcount,
-    const QVariantList &v_duration, const QVariantList &v_last_duration, const int &id_threshold);
+    const QVariantList &v_duration, const QVariantList &v_last_duration, const QVariantList &v_first_duration, const int &id_threshold);
 
   void insert_support_detail(QSqlQuery *query, const QDate &date_, const QTime &time_,
     const QVariantList &rdate, const QVariantList &rtime, const QVariantList &v_value, const QVariantList &v_rcount,
-    const QVariantList &v_duration, const QVariantList &v_last_duration, const int &id_threshold);
+    const QVariantList &v_duration, const QVariantList &v_last_duration, const QVariantList &v_first_duration, const int &id_threshold);
 
   // denormalize
 //  void sqlite_insert_resistance_wtf(QSqlQuery *query, const int &column_count, const QDate &date_,

@@ -12,9 +12,16 @@
 #include <QStringBuilder>
 #include <QTime>
 #include <QVector>
-
 #include "BarDataList.h"
 #include "SQLiteHandler.h"
+#include "XmlConfigHandler.h"
+
+#define MA_LINE_FASTLENGTH  10
+#define MA_LINE_SLOWLENGTH  50
+#define MACD_FASTLENGTH     12
+#define MACD_SLOWLENGTH     26
+#define MACD_LENGTH         9
+#define STOCHASTIC_LENGTH   14
 
 class BarDataAdapter {
   public:
@@ -28,7 +35,8 @@ class BarDataAdapter {
       reset();
     }
 
-    long loadFile(const QSqlDatabase &db, const QString &file_path, const QString &symbol, const IntervalWeight &base_interval) {
+    long loadFile(const QSqlDatabase &db, const QString &database_path, const QString &file_path,
+                  const QString &symbol, const IntervalWeight &base_interval) {
       QFile file(file_path);
       long numOfRows = 0;
 
@@ -111,13 +119,12 @@ class BarDataAdapter {
         qParent.setForwardOnly(true);
 
         if (base_interval < WEIGHT_MONTHLY) {
-          QString database_path = QCoreApplication::applicationDirPath() + "/" + SQLiteHandler::getDatabaseName(symbol, parent_interval);
+          QString local_database_path = database_path + "/" + SQLiteHandler::getDatabaseName(symbol, parent_interval);
           qParent.exec("select max(_parent) from bardata"); qParent.next();
           int last_parent_id = qParent.value(0).toInt();
-          qParent.exec("ATTACH DATABASE '" + database_path + "' AS " + parent_alias);
+          qParent.exec("ATTACH DATABASE '" + local_database_path + "' AS " + parent_alias);
           qParent.exec("select rowid, date_, time_ from " + parent_alias + ".bardata" +
-                       " where rowid>=" + QString::number(last_parent_id) +
-                       " order by rowid asc");
+                       " where rowid>=" + QString::number(last_parent_id) + " order by rowid asc");
           qParent.next();
           qDebug() << "index from parent_id" << last_parent_id;
         }
@@ -178,9 +185,11 @@ class BarDataAdapter {
               QDateTime parent_UB(parent_date, parent_time);
 
               if (parent_interval >= WEIGHT_DAILY) {
-                parent_LB = parent_LB.addDays(-parent_interval/WEIGHT_DAILY);
+                // Weekly, Daily
+                parent_LB = parent_LB.addDays(- parent_interval / WEIGHT_DAILY);
               } else {
-                parent_LB = parent_LB.addSecs(-parent_interval*60);
+                // 60min, 5min
+                parent_LB = parent_LB.addSecs(- parent_interval * 60);
               }
 
               if (child_datetime > parent_LB && child_datetime <= parent_UB) {
@@ -231,7 +240,7 @@ class BarDataAdapter {
             m_low = low.last().toDouble();
             m_close = close.last().toDouble();
 
-            distfs += QString::number(fabs(distf.last().toDouble() - dists.last().toDouble()), 'f', 4);
+            distfs += QString::number(fabs(m_fastavg - m_slowavg), 'f', 4);
             n_distfs += QString::number(distfs.last().toDouble() / m_close, 'f', 8);
 
             distof += QString::number(m_open - m_fastavg, 'f', 4);
@@ -286,40 +295,36 @@ class BarDataAdapter {
             distFS_current = m_fastavg - m_slowavg;
 
             if (distFS_current * distFS_prev < 0 || (date.size() > 1 && distFS_prev == 0 && distFS_current != 0)) {
-
               close_fs = close_prev;
 
               if (base_interval >= WEIGHT_DAILY) {
-
-                double distFS_Cross = (m_close - close_fs) / atr.last().toDouble();
-                dispfs += QString::number(distFS_Cross,'f',4);
-
+                dist_fscross += QString::number(m_close - close_fs, 'f', 4);
+                dist_fscross_atr += QString::number((m_close - close_fs) / atr.last().toDouble(),'f',4);
               } else {
                 //
-                // TODO: update intra-day, divide by daily ATR
+                // update intra-day, divide by daily ATR later
                 //
-                dispfs += QString::number(m_close - close_fs, 'f', 4);
+                dist_fscross += QString::number(m_close - close_fs, 'f', 4);
+                dist_fscross_atr += QString::number(m_close - close_fs, 'f', 4);
               }
 
             } else {
               if (close_fs > 0) {
 
-                if (base_interval >= WEIGHT_DAILY) {
-
-                  double distFS_Cross = (m_close - close_fs) / atr.last().toDouble();
-                  dispfs += QString::number(distFS_Cross, 'f', 4);
-
+                if (base_interval >= WEIGHT_DAILY) {                  
+                  dist_fscross += QString::number(m_close - close_fs, 'f', 4);
+                  dist_fscross_atr += QString::number((m_close - close_fs) / atr.last().toDouble(), 'f', 4);
                 } else {
                   //
-                  // TODO: update intra-day, divide by daily ATR
+                  // update intra-day, divide by daily ATR later
                   //
-                  dispfs += QString::number(m_close - close_fs,'f',4);
+                  dist_fscross += QString::number(m_close - close_fs,'f',4);
+                  dist_fscross_atr += QString::number(m_close - close_fs,'f',4);
                 }
-
               } else {
-                dispfs += 0;
+                dist_fscross += 0;
+                dist_fscross_atr += 0;
               }
-
             }
 
             distFS_prev = distFS_current;
@@ -357,74 +362,74 @@ class BarDataAdapter {
             //
             // RSI > 70 and RSI < 30
             //
-            if (rsi.last().toDouble() > 70.0) {
-              rsi_g70 += (++last_rsi_g70);
-              rsi_l30 += 0;
-              last_rsi_l30 = 0;
-            } else if (rsi.last().toDouble() < 30.0) {
-              rsi_l30 += (++last_rsi_l30);
-              rsi_g70 += 0;
-              last_rsi_g70 = 0;
-            } else {
-              rsi_g70 += 0;
-              rsi_l30 += 0;
-              last_rsi_g70 = 0;
-              last_rsi_l30 = 0;
-            }
+//            if (rsi.last().toDouble() > 70.0) {
+//              rsi_g70 += (++last_rsi_g70);
+//              rsi_l30 += 0;
+//              last_rsi_l30 = 0;
+//            } else if (rsi.last().toDouble() < 30.0) {
+//              rsi_l30 += (++last_rsi_l30);
+//              rsi_g70 += 0;
+//              last_rsi_g70 = 0;
+//            } else {
+//              rsi_g70 += 0;
+//              rsi_l30 += 0;
+//              last_rsi_g70 = 0;
+//              last_rsi_l30 = 0;
+//            }
 
             //
             // MACD > 0 and MACD < 0
             //
-            if (macd.last().toDouble() > 0) {
-              macd_g0 += (++last_macd_g0);
-              macd_l0 += 0;
-              last_macd_l0 = 0;
-            } else if (macd.last().toDouble() < 0) {
-              macd_l0 += (++last_macd_l0);
-              macd_g0 += 0;
-              last_macd_g0 = 0;
-            } else {
-              macd_g0 += 0;
-              macd_l0 += 0;
-              last_macd_g0 = 0;
-              last_macd_l0 = 0;
-            }
+//            if (macd.last().toDouble() > 0) {
+//              macd_g0 += (++last_macd_g0);
+//              macd_l0 += 0;
+//              last_macd_l0 = 0;
+//            } else if (macd.last().toDouble() < 0) {
+//              macd_l0 += (++last_macd_l0);
+//              macd_g0 += 0;
+//              last_macd_g0 = 0;
+//            } else {
+//              macd_g0 += 0;
+//              macd_l0 += 0;
+//              last_macd_g0 = 0;
+//              last_macd_l0 = 0;
+//            }
 
             //
             // SlowK < 20 and SlowK > 80
             //
-            if (slowk.last().toDouble() > 80.0) {
-              slowk_g80 += (++last_slowk_g80);
-              slowk_l20 += 0;
-              last_slowk_l20 = 0;
-            } else if (slowk.last().toDouble() < 20) {
-              slowk_l20 += (++last_slowk_l20);
-              slowk_g80 += 0;
-              last_slowk_g80 = 0;
-            } else {
-              slowk_g80 += 0;
-              slowk_l20 += 0;
-              last_slowk_g80 = 0;
-              last_slowk_l20 = 0;
-            }
+//            if (slowk.last().toDouble() > 80.0) {
+//              slowk_g80 += (++last_slowk_g80);
+//              slowk_l20 += 0;
+//              last_slowk_l20 = 0;
+//            } else if (slowk.last().toDouble() < 20) {
+//              slowk_l20 += (++last_slowk_l20);
+//              slowk_g80 += 0;
+//              last_slowk_g80 = 0;
+//            } else {
+//              slowk_g80 += 0;
+//              slowk_l20 += 0;
+//              last_slowk_g80 = 0;
+//              last_slowk_l20 = 0;
+//            }
 
             //
             // SlowD < 20 and SlowD > 80
             //
-            if (slowd.last().toDouble() > 80.0) {
-              slowd_g80 += (++last_slowd_g80);
-              slowd_l20 += 0;
-              last_slowd_l20 = 0;
-            } else if (slowd.last().toDouble() < 20) {
-              slowd_l20 += (++last_slowd_l20);
-              slowd_g80 += 0;
-              last_slowd_g80 = 0;
-            } else {
-              slowd_g80 += 0;
-              slowd_l20 += 0;
-              last_slowd_g80 = 0;
-              last_slowd_l20 = 0;
-            }
+//            if (slowd.last().toDouble() > 80.0) {
+//              slowd_g80 += (++last_slowd_g80);
+//              slowd_l20 += 0;
+//              last_slowd_l20 = 0;
+//            } else if (slowd.last().toDouble() < 20) {
+//              slowd_l20 += (++last_slowd_l20);
+//              slowd_g80 += 0;
+//              last_slowd_g80 = 0;
+//            } else {
+//              slowd_g80 += 0;
+//              slowd_l20 += 0;
+//              last_slowd_g80 = 0;
+//              last_slowd_l20 = 0;
+//            }
 
             //
             // Close > Fast and Close < Fast
@@ -487,7 +492,7 @@ class BarDataAdapter {
         // _parent_monthly
         //
         if (base_interval < WEIGHT_MONTHLY) {
-          QString database_path = QCoreApplication::applicationDirPath() + "/" + SQLiteHandler::getDatabaseName(symbol, WEIGHT_MONTHLY);
+          QString local_database_path = database_path + "/" + SQLiteHandler::getDatabaseName(symbol, WEIGHT_MONTHLY);
           QString sql_update =
             "update bardata"
             " set _parent_monthly="
@@ -496,12 +501,13 @@ class BarDataAdapter {
             " where bardata._parent_monthly=0 and exists(select 1 from dbMonthly.bardata a"
              " where strftime('%m%Y',bardata.date_)=strftime('%m%Y',a.date_) LIMIT 1);";
 
-          query.exec("ATTACH DATABASE '" + database_path + "' AS dbMonthly");
+          query.exec("ATTACH DATABASE '" + local_database_path + "' AS dbMonthly");
           query.exec("PRAGMA journal_mode = OFF;");
           query.exec("PRAGMA synchronous = OFF;");
           query.exec("PRAGMA cache_size = 50000;");
           query.exec("BEGIN TRANSACTION;");
           query.exec(sql_update);
+          if (query.lastError().isValid()) qDebug() << query.lastError();
           query.exec("COMMIT;");
         }
       }
@@ -742,6 +748,20 @@ class BarDataAdapter {
       return "";
     }
 
+    static IntervalWeight getIntervalWeightFromName(const QString &name) {
+      QStringList str_split = name.split("-");
+      if (str_split.size() > 1) {
+        QString s = str_split[0].toLower();
+        if (s == "month") return WEIGHT_MONTHLY;
+        if (s == "week") return WEIGHT_WEEKLY;
+        if (s == "day") return WEIGHT_DAILY;
+        if (s == "60") return WEIGHT_60MIN;
+        if (s == "5") return WEIGHT_5MIN;
+        if (s == "1") return WEIGHT_1MIN;
+      }
+      return WEIGHT_INVALID;
+    }
+
     void update_index_parent(const QSqlDatabase &child_database, const QString &symbol,
         const QString &parent_database_name, const int &parent_weight, bool enable_optimization = true) {
       QString monthly_database_path = QCoreApplication::applicationDirPath() + "/" + SQLiteHandler::getDatabaseName(symbol, WEIGHT_MONTHLY);
@@ -922,7 +942,8 @@ class BarDataAdapter {
 //      }
     }*/
 
-    static void update_index_parent_prev(const QSqlDatabase &base_database, const QString &symbol, const IntervalWeight &parent) {
+    static void update_index_parent_prev(const QSqlDatabase &base_database, const QString &database_path,
+                                         const QString &symbol, const IntervalWeight &parent) {
       QSqlQuery query(base_database);
       QString base_bardata = SQLiteHandler::TABLE_NAME_BARDATA;
       QString parent_alias;
@@ -943,7 +964,7 @@ class BarDataAdapter {
 
       parent_alias = "db" + SQLiteHandler::get_interval_name(parent);
       parent_bardata = parent_alias + "." + SQLiteHandler::TABLE_NAME_BARDATA;
-      parent_database_path = QCoreApplication::applicationDirPath() + "/" + SQLiteHandler::getDatabaseName(symbol, parent);
+      parent_database_path = database_path + "/" + SQLiteHandler::getDatabaseName(symbol, parent);
 
       sql_update =
         "update " + base_bardata +
@@ -971,12 +992,12 @@ class BarDataAdapter {
       query.exec("DETACH " + parent_alias);
     }
 
-    static void update_parent_monthly_prev(const QSqlDatabase &base_database, const QString &symbol) {
+    static void update_parent_monthly_prev(const QSqlDatabase &base_database, const QString &database_path, const QString &symbol) {
       QSqlQuery query(base_database);
       const QString base_bardata = SQLiteHandler::TABLE_NAME_BARDATA;
       const QString parent_alias = "dbMonthly";
       const QString parent_bardata = parent_alias + "." + SQLiteHandler::TABLE_NAME_BARDATA;
-      const QString parent_database_path = QCoreApplication::applicationDirPath() + "/" + SQLiteHandler::getDatabaseName(symbol,WEIGHT_MONTHLY);
+      const QString parent_database_path = database_path + "/" + SQLiteHandler::getDatabaseName(symbol,WEIGHT_MONTHLY);
       QString start_rowid_base = "";
       QString start_rowid_parent = "";
       int start_from_rowid_base = 0;
@@ -1016,25 +1037,6 @@ class BarDataAdapter {
       query.exec("COMMIT;");
       query.exec("DETACH " + parent_alias);
     }
-
-    // deprecated
-    /*static int get_resistance_column_count(const QSqlDatabase &database, const int &threshold_index) {
-      QSqlQuery query(database);
-      QString sql_select =
-        "select max(column_count) from " + SQLiteHandler::TABLE_NAME_RESISTANCE_TAB +
-        " where index_=" + QString::number(threshold_index);
-      query.exec(sql_select);
-      return query.next()? query.value(0).toInt():-1;
-    }*/
-
-    /*static int get_support_column_count(const QSqlDatabase &database, const int &threshold_index) {
-      QSqlQuery query(database);
-      QString sql_select =
-        "select max(column_count) from " + SQLiteHandler::TABLE_NAME_SUPPORT_TAB +
-        " where index_=" + QString::number(threshold_index);
-      query.exec(sql_select);
-      return query.next()? query.value(0).toInt():-1;
-    }*/
 
     static int getLastRowid(const QSqlDatabase &database) {
       if (!database.isOpenError()) {
@@ -1245,930 +1247,6 @@ class BarDataAdapter {
         return result;
       }
       return QVector<QDateTime>();
-    }*/
-
-    // absolute value
-    /*static void update_distrank(const QSqlDatabase &database, const int &year) {
-      const QString tempDatabaseName = "dbTemp";
-      const QString tempTableDistF = tempDatabaseName + ".distfRank";
-      const QString tempTableDistS = tempDatabaseName + ".distsRank";
-      const QString tempTableDistRank = tempDatabaseName + ".distrank";
-      const QString _year = QString::number(year);
-      const QString distf_column_name = " distf_" + _year;
-      const QString dists_column_name = " dists_" + _year;
-      QString sql_create_table_tempdistf =
-        "CREATE TABLE IF NOT EXISTS " + tempTableDistF + "("
-          "_ID INTEGER PRIMARY KEY,"
-          "_rid INTEGER UNIQUE NOT NULL,"
-          "distF REAL);";
-
-      QString sql_create_table_tempdists =
-        "CREATE TABLE IF NOT EXISTS " + tempTableDistS + "("
-          "_ID INTEGER PRIMARY KEY,"
-          "_rid INTEGER UNIQUE NOT NULL,"
-          "distS REAL);";
-
-      QString sql_create_table_tempdistrank =
-        "CREATE TABLE IF NOT EXISTS " + tempTableDistRank + "("
-          "_ID INTEGER PRIMARY KEY,"
-          "_rid INTEGER NOT NULL,"
-          "distf_rank INTEGER,"
-          "dists_rank INTEGER);";
-
-      QString sql_insert_tempdistf =
-        "insert into "+ tempTableDistF + "(_rid, distf) "
-        " select rowid, distf from " + SQLiteHandler::TABLE_NAME_BARDATA +
-        " where date_>='" + _year + "-01-01' order by distf asc";
-
-      QString sql_insert_tempdists =
-        "insert into "+ tempTableDistS + "(_rid, dists) "
-        " select rowid, dists from " + SQLiteHandler::TABLE_NAME_BARDATA +
-        " where date_>='" + _year + "-01-01' order by dists asc";
-
-      QString sql_insert_tempdistrank =
-        "insert into " + tempTableDistRank + "(_rid, distf_rank, dists_rank)"
-        " select a._rid, a._id, b._id"
-        " from " + tempTableDistF + " a join " + tempTableDistS + " b on a._rid=b._rid";
-
-      // prepare temp database
-      QSqlQuery query(database);
-      query.setForwardOnly(true);
-//      query.exec("ATTACH DATABASE ':memory:' AS " + tempDatabaseName + ";");
-      query.exec("ATTACH DATABASE '' AS " + tempDatabaseName + ";");
-      query.exec(sql_create_table_tempdistf);
-      query.exec(sql_create_table_tempdists);
-      query.exec(sql_create_table_tempdistrank);
-      query.exec("PRAGMA journal_mode = OFF;");
-      query.exec("PRAGMA synchronous = OFF;");
-      query.exec("PRAGMA cache_size = 50000;");
-      query.exec("BEGIN TRANSACTION;");
-      query.exec(sql_insert_tempdistf);
-      query.exec(sql_insert_tempdists);
-      query.exec(sql_insert_tempdistrank);
-      query.exec("COMMIT");
-
-      // get row count
-      query.exec("select count(1) from " + tempTableDistF);
-      int rowcount_distf = query.next()? query.value(0).toInt() : 0;
-
-      query.exec("select count(1) from " + tempTableDistS);
-      int rowcount_dists = query.next()? query.value(0).toInt() : 0;
-//      qDebug() << "RowCount distf" << rowcount_distf << " dists" << rowcount_dists;
-
-      // main update
-      query.exec("select _rid, distf_rank, dists_rank from " + tempTableDistRank);
-
-      QSqlQuery qUpdate(database);
-      QString sql_update_distrank;
-      QVariantList v_distf;
-      QVariantList v_dists;
-      QVariantList v_rowid;
-      double distf_rank;
-      double dists_rank;
-      qUpdate.exec("PRAGMA journal_mode = OFF;");
-      qUpdate.exec("PRAGMA synchronous = OFF;");
-      qUpdate.exec("PRAGMA cache_size = 50000;");
-
-      sql_update_distrank =
-        "update " + SQLiteHandler::TABLE_NAME_BARDATA + " set " +
-          distf_column_name + "=?," +
-          dists_column_name + "=?" +
-        " where rowid=?";
-
-      while (query.next()) {
-        distf_rank = (query.value(1).toDouble()-1.0) / rowcount_distf;
-        dists_rank = (query.value(2).toDouble()-1.0) / rowcount_dists;
-
-        v_distf.append(QString::number(distf_rank,'f',4));
-        v_dists.append(QString::number(dists_rank,'f',4));
-        v_rowid.append(query.value(0).toString());
-
-        if (v_rowid.count() >= 50000) {
-          qUpdate.exec("BEGIN TRANSACTION;");
-          qUpdate.prepare(sql_update_distrank);
-          qUpdate.addBindValue(v_distf);
-          qUpdate.addBindValue(v_dists);
-          qUpdate.addBindValue(v_rowid);
-          qUpdate.execBatch();
-          qUpdate.exec("COMMIT;");
-          v_distf.clear();
-          v_dists.clear();
-          v_rowid.clear();
-        }
-      }
-
-      if (v_rowid.count() > 0) {
-        qUpdate.exec("BEGIN TRANSACTION;");
-        qUpdate.prepare(sql_update_distrank);
-        qUpdate.addBindValue(v_distf);
-        qUpdate.addBindValue(v_dists);
-        qUpdate.addBindValue(v_rowid);
-        qUpdate.execBatch();
-        qUpdate.exec("COMMIT;");
-        v_distf.clear();
-        v_dists.clear();
-        v_rowid.clear();
-      }
-
-      BarDataList *list_distf = new BarDataList();
-      BarDataList *list_dists = new BarDataList();
-      t_bardata *res;
-
-//      query.exec("select _id, _rid, distf from " + tempTableDistF);
-      query.exec("select distf from " + tempTableDistF);
-      while (query.next()) {
-        res  = list_distf->getNextItem();
-        res->distf = query.value(0).toDouble(); // distF
-      }
-
-      query.exec("select dists from " + tempTableDistS);
-      while (query.next()) {
-        res  = list_dists->getNextItem();
-        res->dists = query.value(0).toDouble(); // distS
-      }
-
-//      qDebug() << "list size" << list->length();
-//      QTime time; time.start();
-//      int idx = list->binary_search_distf(0.5);
-//      qDebug() << "idx 1" << idx << ("(" + QString::number((*list)[idx]->distf) + ")") ;
-//      qDebug() << "\n";
-
-//      idx = list->binary_search_distf(0.0);
-//      qDebug() << "idx 2" << idx << ("(" + QString::number((*list)[idx]->distf) + ")") ;
-//      qDebug() << "\n";
-
-//      idx = list->binary_search_distf(99.0);
-//      qDebug() << "idx 3" << idx << ("(" + QString::number((*list)[idx]->distf) + ")") ;
-//      qDebug() << "\n";
-//      qDebug() << "Searching time:" << (time.elapsed()/1000.0);
-
-      double d_rowcount_distf = rowcount_distf + 1;
-      double d_rowcount_dists = rowcount_dists + 1;
-      ++rowcount_distf;
-      ++rowcount_dists;
-
-      if (rowcount_distf > 0 && rowcount_dists > 0) {
-        QString sql_update_prev =
-          "update bardata set " +
-            distf_column_name + "=?," +
-            dists_column_name + "=?" +
-          " where rowid=?";
-        QString sql_select_prev = "select rowid,distf,dists from bardata where date_<'" + _year + "-01-01'";
-        query.exec(sql_select_prev);
-
-        v_distf.clear();
-        v_dists.clear();
-        v_rowid.clear();
-
-        while (query.next()) {
-          distf_rank = list_distf->binary_search_distf(query.value(1).toDouble())/d_rowcount_distf;
-          dists_rank = list_dists->binary_search_dists(query.value(2).toDouble())/d_rowcount_dists;
-
-          v_distf.append(QString::number(distf_rank,'f',4));
-          v_dists.append(QString::number(dists_rank,'f',4));
-          v_rowid.append(query.value(0).toInt());
-
-          if (v_rowid.count() >= 50000) {
-            qUpdate.exec("BEGIN TRANSACTION;");
-            qUpdate.prepare(sql_update_prev);
-            qUpdate.addBindValue(v_distf);
-            qUpdate.addBindValue(v_dists);
-            qUpdate.addBindValue(v_rowid);
-            qUpdate.execBatch();
-            qUpdate.exec("COMMIT;");
-            v_distf.clear();
-            v_dists.clear();
-            v_rowid.clear();
-          }
-        }
-
-        if (v_rowid.count() > 0) {
-          qUpdate.exec("BEGIN TRANSACTION;");
-          qUpdate.prepare(sql_update_prev);
-          qUpdate.addBindValue(v_distf);
-          qUpdate.addBindValue(v_dists);
-          qUpdate.addBindValue(v_rowid);
-          qUpdate.execBatch();
-          qUpdate.exec("COMMIT;");
-          v_distf.clear();
-          v_dists.clear();
-          v_rowid.clear();
-        }
-      }
-
-      query.exec("DETACH DATABASE " + tempDatabaseName);
-      delete list_distf;
-      delete list_dists;
-    }*/
-
-    // non-absolute value
-    /*static void update_distrank_v2(const QSqlDatabase &database, const int &year, const QString &search_operator) {
-      const QString tempDatabaseName = "dbTemp";
-      const QString tempTableDistF = tempDatabaseName + ".distfRank";
-      const QString tempTableDistS = tempDatabaseName + ".distsRank";
-      const QString _year = QString::number(year);
-      const QString distf_column_name = " distfc_" + _year;
-      const QString dists_column_name = " distsc_" + _year;
-      QString sql_create_table_tempdistf =
-        "CREATE TABLE IF NOT EXISTS " + tempTableDistF + "("
-          "_ID INTEGER PRIMARY KEY,"
-          "_rid INTEGER UNIQUE NOT NULL,"
-          "distF REAL);";
-
-      QString sql_create_table_tempdists =
-        "CREATE TABLE IF NOT EXISTS " + tempTableDistS + "("
-          "_ID INTEGER PRIMARY KEY,"
-          "_rid INTEGER UNIQUE NOT NULL,"
-          "distS REAL);";
-
-      QString sql_insert_tempdistf =
-        "insert into "+ tempTableDistF + "(_rid, distf) "
-        " select rowid, distfc from " + SQLiteHandler::TABLE_NAME_BARDATA +
-        " where date_>='" + _year + "-01-01' and distfc"+search_operator+"0 order by distfc " + (search_operator==">"? "asc":"desc");
-
-      QString sql_insert_tempdists =
-        "insert into "+ tempTableDistS + "(_rid, dists) "
-        " select rowid, distsc from " + SQLiteHandler::TABLE_NAME_BARDATA +
-        " where date_>='" + _year + "-01-01' and distsc"+search_operator+"0 order by distsc " + (search_operator==">"? "asc":"desc");
-
-      // prepare temp database
-      QSqlQuery query(database);
-      query.setForwardOnly(true);
-//      query.exec("ATTACH DATABASE ':memory:' AS " + tempDatabaseName + ";");
-      query.exec("ATTACH DATABASE '' AS " + tempDatabaseName + ";");
-      query.exec(sql_create_table_tempdistf);
-      query.exec(sql_create_table_tempdists);
-      query.exec("PRAGMA journal_mode = OFF;");
-      query.exec("PRAGMA synchronous = OFF;");
-      query.exec("PRAGMA cache_size = 50000;");
-      query.exec("BEGIN TRANSACTION;");
-      query.exec(sql_insert_tempdistf);
-      query.exec(sql_insert_tempdists);
-      query.exec("COMMIT");
-
-      // get row count
-      query.exec("select count(1) from " + tempTableDistF);
-      int rowcount_distf = query.next()? query.value(0).toInt() : 0;
-
-      query.exec("select count(1) from " + tempTableDistS);
-      int rowcount_dists = query.next()? query.value(0).toInt() : 0;
-//      qDebug() << "RowCount distf" << rowcount_distf << " dists" << rowcount_dists;
-
-      QSqlQuery qUpdate(database);
-      QString sql_update_distrank;
-      QVariantList v_distf;
-      QVariantList v_dists;
-      QVariantList v_rowid;
-      double distf_rank;
-      double dists_rank;
-      qUpdate.exec("PRAGMA journal_mode = DELETE;");
-      qUpdate.exec("PRAGMA synchronous = NORMAL;");
-
-      //
-      // UPDATE DIST-F
-      //
-      sql_update_distrank = "update bardata set " + distf_column_name + "=? where rowid=?";
-      query.exec("select _rid, _rowid_ from " + tempTableDistF);
-      qUpdate.exec("BEGIN TRANSACTION;");
-
-      while (query.next()) {
-        distf_rank = (query.value(1).toDouble()-1.0) / rowcount_distf;
-        v_distf.append(QString::number(distf_rank,'f',4));
-        v_rowid.append(query.value(0).toString());
-        if (v_rowid.count() >= 50000) {
-          qUpdate.prepare(sql_update_distrank);
-          qUpdate.addBindValue(v_distf);
-          qUpdate.addBindValue(v_rowid);
-          qUpdate.execBatch();
-          v_distf.clear();
-          v_rowid.clear();
-        }
-      }
-
-      if (v_rowid.count() > 0) {
-        qUpdate.prepare(sql_update_distrank);
-        qUpdate.addBindValue(v_distf);
-        qUpdate.addBindValue(v_rowid);
-        qUpdate.execBatch();
-        v_distf.clear();
-        v_rowid.clear();
-      }
-
-      qUpdate.exec("COMMIT;");
-
-      //
-      // UPDATE DIST-S
-      //
-      sql_update_distrank = "update bardata set " + dists_column_name + "=? where rowid=?";
-      query.exec("select _rid, _rowid_ from " + tempTableDistS);
-      qUpdate.exec("BEGIN TRANSACTION;");
-
-      while (query.next()) {
-        dists_rank = (query.value(1).toDouble()-1.0) / rowcount_dists;
-        v_dists.append(QString::number(dists_rank,'f',4));
-        v_rowid.append(query.value(0).toString());
-        if (v_rowid.count() >= 50000) {
-          qUpdate.prepare(sql_update_distrank);
-          qUpdate.addBindValue(v_dists);
-          qUpdate.addBindValue(v_rowid);
-          qUpdate.execBatch();
-          v_dists.clear();
-          v_rowid.clear();
-        }
-      }
-
-      if (v_rowid.count() > 0) {
-        qUpdate.prepare(sql_update_distrank);
-        qUpdate.addBindValue(v_dists);
-        qUpdate.addBindValue(v_rowid);
-        qUpdate.execBatch();  
-        v_dists.clear();
-        v_rowid.clear();
-      }
-
-      qUpdate.exec("COMMIT;");
-
-      //
-      // UPDATE PREVIOUS
-      //
-      BarDataList *list_distf = new BarDataList();
-      BarDataList *list_dists = new BarDataList();
-      t_bardata *res;
-
-//      query.exec("select _id, _rid, distf from " + tempTableDistF);
-      query.exec("select distf from " + tempTableDistF);
-      while (query.next()) {
-        res  = list_distf->getNextItem();
-        res->distf = query.value(0).toDouble(); // distF
-      }
-
-      query.exec("select dists from " + tempTableDistS);
-      while (query.next()) {
-        res  = list_dists->getNextItem();
-        res->dists = query.value(0).toDouble(); // distS
-      }
-
-//      qDebug() << "list size" << list->length();
-//      QTime time; time.start();
-//      int idx = list->binary_search_distf(0.5);
-//      qDebug() << "idx 1" << idx << ("(" + QString::number((*list)[idx]->distf) + ")") ;
-//      qDebug() << "\n";
-
-//      idx = list->binary_search_distf(0.0);
-//      qDebug() << "idx 2" << idx << ("(" + QString::number((*list)[idx]->distf) + ")") ;
-//      qDebug() << "\n";
-
-//      idx = list->binary_search_distf(99.0);
-//      qDebug() << "idx 3" << idx << ("(" + QString::number((*list)[idx]->distf) + ")") ;
-//      qDebug() << "\n";
-//      qDebug() << "Searching time:" << (time.elapsed()/1000.0);
-
-      double d_rowcount_distf = rowcount_distf + 1;
-      double d_rowcount_dists = rowcount_dists + 1;
-      ++rowcount_distf;
-      ++rowcount_dists;
-
-      qUpdate.exec("BEGIN TRANSACTION;");
-
-      // update previous distf
-      if (rowcount_distf > 0) {
-        QString sql_update_prev = "update bardata set " + distf_column_name + "=? where rowid=?";
-        QString sql_select_prev = "select rowid, distfc from bardata where date_<'" + _year + "-01-01'";
-        query.exec(sql_select_prev);
-        v_distf.clear();
-        v_rowid.clear();
-
-        while (query.next()) {
-          distf_rank = list_distf->binary_search_distf(query.value(1).toDouble())/d_rowcount_distf;
-          v_distf.append(QString::number(distf_rank,'f',4));
-          v_rowid.append(query.value(0).toInt());
-          if (v_rowid.count() >= 50000) {
-            qUpdate.prepare(sql_update_prev);
-            qUpdate.addBindValue(v_distf);
-            qUpdate.addBindValue(v_rowid);
-            qUpdate.execBatch();
-            v_distf.clear();
-            v_rowid.clear();
-          }
-        }
-
-        if (v_rowid.count() > 0) { 
-          qUpdate.prepare(sql_update_prev);
-          qUpdate.addBindValue(v_distf);
-          qUpdate.addBindValue(v_rowid);
-          qUpdate.execBatch();
-          v_distf.clear();
-          v_rowid.clear();
-        }
-//        qUpdate.exec("COMMIT;");
-      }
-
-      // update previous dists
-      if (rowcount_dists > 0) {
-        QString sql_update_prev = "update bardata set " + dists_column_name + "=? where rowid=?";
-        QString sql_select_prev = "select rowid, distsc from bardata where date_<'" + _year + "-01-01'";
-        query.exec(sql_select_prev);
-        v_dists.clear();
-        v_rowid.clear();
-
-//        qUpdate.exec("BEGIN TRANSACTION;");
-
-        while (query.next()) {
-          dists_rank = list_distf->binary_search_dists(query.value(1).toDouble())/d_rowcount_dists;
-          v_dists.append(QString::number(dists_rank,'f',4));
-          v_rowid.append(query.value(0).toInt());
-
-          if (v_rowid.count() >= 50000) {
-            qUpdate.prepare(sql_update_prev);
-            qUpdate.addBindValue(v_dists);
-            qUpdate.addBindValue(v_rowid);
-            qUpdate.execBatch();
-            v_dists.clear();
-            v_rowid.clear();
-          }
-        }
-
-        if (v_rowid.count() > 0) {
-          qUpdate.prepare(sql_update_prev);
-          qUpdate.addBindValue(v_dists);
-          qUpdate.addBindValue(v_rowid);
-          qUpdate.execBatch();
-          v_dists.clear();
-          v_rowid.clear();
-        }
-      }
-
-      qUpdate.exec("COMMIT;");
-      query.exec("DETACH DATABASE " + tempDatabaseName);
-      delete list_distf;
-      delete list_dists;
-    }*/
-
-    /*static void update_distcf_distcs(const QSqlDatabase &database, const int &year, const QString &search_operator) {
-      const QString tempDatabaseName = "dbTemp";
-      const QString tempTableDistF = tempDatabaseName + ".distfRank";
-      const QString tempTableDistS = tempDatabaseName + ".distsRank";
-      const QString _year = QString::number(year);
-      const QString distf_column_name = " distcf_" + _year;
-      const QString dists_column_name = " distcs_" + _year;
-      QString sql_create_table_tempdistf =
-        "CREATE TABLE IF NOT EXISTS " + tempTableDistF + "("
-          "_ID INTEGER PRIMARY KEY,"
-          "_rid INTEGER UNIQUE NOT NULL,"
-          "distF REAL);";
-
-      QString sql_create_table_tempdists =
-        "CREATE TABLE IF NOT EXISTS " + tempTableDistS + "("
-          "_ID INTEGER PRIMARY KEY,"
-          "_rid INTEGER UNIQUE NOT NULL,"
-          "distS REAL);";
-
-//      QString sql_insert_tempdistf =
-//        "insert into "+ tempTableDistF + "(_rid, distf) "
-//        " select rowid, distcf from " + SQLiteHandler::TABLE_NAME_BARDATA +
-//        " where date_>='" + _year + "-01-01' and distcf"+search_operator+"0 order by distcf " + (search_operator==">"? "asc":"desc");
-
-//      QString sql_insert_tempdists =
-//        "insert into "+ tempTableDistS + "(_rid, dists) "
-//        " select rowid, distcs from " + SQLiteHandler::TABLE_NAME_BARDATA +
-//        " where date_>='" + _year + "-01-01' and distcs"+search_operator+"0 order by distcs " + (search_operator==">"? "asc":"desc");
-
-      QString sql_insert_tempdistf =
-        "insert into "+ tempTableDistF + "(_rid, distf)"
-        " select rowid, n_distcf from " + SQLiteHandler::TABLE_NAME_BARDATA +
-        " where date_>='" + _year + "-01-01' and distcf"+search_operator+"0 order by n_distcf " + (search_operator==">"? "asc":"desc");
-
-      QString sql_insert_tempdists =
-        "insert into "+ tempTableDistS + "(_rid, dists)"
-        " select rowid, n_distcs from " + SQLiteHandler::TABLE_NAME_BARDATA +
-        " where date_>='" + _year + "-01-01' and distcs"+search_operator+"0 order by n_distcs " + (search_operator==">"? "asc":"desc");
-
-      // prepare temp database
-      QSqlQuery query(database);
-      query.setForwardOnly(true);
-      query.exec("ATTACH DATABASE '' AS " + tempDatabaseName + ";");
-      query.exec(sql_create_table_tempdistf);
-      query.exec(sql_create_table_tempdists);
-      query.exec("PRAGMA journal_mode = OFF;");
-      query.exec("PRAGMA synchronous = OFF;");
-      query.exec("PRAGMA cache_size = 50000;");
-      query.exec("BEGIN TRANSACTION;");
-      query.exec(sql_insert_tempdistf);
-      query.exec(sql_insert_tempdists);
-      query.exec("COMMIT");
-
-      // get row count
-      query.exec("select count(1) from " + tempTableDistF);
-      int rowcount_distf = query.next()? query.value(0).toInt() : 0;
-
-      query.exec("select count(1) from " + tempTableDistS);
-      int rowcount_dists = query.next()? query.value(0).toInt() : 0;
-//      qDebug() << "RowCount distf" << rowcount_distf << " dists" << rowcount_dists;
-
-      QSqlQuery qUpdate(database);
-      QString sql_update_distrank;
-      QVariantList v_distf;
-      QVariantList v_dists;
-      QVariantList v_rowid;
-      double distf_rank;
-      double dists_rank;
-
-      //
-      // UPDATE DIST-F
-      //
-      sql_update_distrank = "update bardata set " + distf_column_name + "=? where rowid=?";
-      query.exec("select _rid, _rowid_ from " + tempTableDistF);
-      qUpdate.exec("PRAGMA journal_mode = OFF;");
-      qUpdate.exec("PRAGMA synchronous = OFF;");
-      qUpdate.exec("BEGIN TRANSACTION;");
-
-      while (query.next()) {
-        distf_rank = (query.value(1).toDouble()-1.0) / rowcount_distf;
-        v_distf.append(QString::number(distf_rank,'f',4));
-        v_rowid.append(query.value(0).toString());
-        if (v_rowid.count() >= 80000) {
-          qUpdate.prepare(sql_update_distrank);
-          qUpdate.addBindValue(v_distf);
-          qUpdate.addBindValue(v_rowid);
-          qUpdate.execBatch();
-          v_distf.clear();
-          v_rowid.clear();
-        }
-      }
-
-      if (v_rowid.count() > 0) {
-        qUpdate.prepare(sql_update_distrank);
-        qUpdate.addBindValue(v_distf);
-        qUpdate.addBindValue(v_rowid);
-        qUpdate.execBatch();
-        v_distf.clear();
-        v_rowid.clear();
-      }
-
-      qUpdate.exec("COMMIT;");
-
-      //
-      // UPDATE DIST-S
-      //
-      sql_update_distrank = "update bardata set " + dists_column_name + "=? where rowid=?";
-      query.exec("select _rid, _rowid_ from " + tempTableDistS);
-      qUpdate.exec("BEGIN TRANSACTION;");
-
-      while (query.next()) {
-        dists_rank = (query.value(1).toDouble()-1.0) / rowcount_dists;
-        v_dists.append(QString::number(dists_rank,'f',4));
-        v_rowid.append(query.value(0).toString());
-        if (v_rowid.count() >= 80000) {
-          qUpdate.prepare(sql_update_distrank);
-          qUpdate.addBindValue(v_dists);
-          qUpdate.addBindValue(v_rowid);
-          qUpdate.execBatch();
-          v_dists.clear();
-          v_rowid.clear();
-        }
-      }
-
-      if (v_rowid.count() > 0) {
-        qUpdate.prepare(sql_update_distrank);
-        qUpdate.addBindValue(v_dists);
-        qUpdate.addBindValue(v_rowid);
-        qUpdate.execBatch();
-        v_dists.clear();
-        v_rowid.clear();
-      }
-
-      qUpdate.exec("COMMIT;");
-
-      //
-      // UPDATE PREVIOUS
-      //
-      BarDataList *list_distf = new BarDataList();
-      t_bardata *res;
-
-      query.exec("select distf from " + tempTableDistF + " order by distf asc");
-      while (query.next()) {
-        res = list_distf->getNextItem();
-        res->distf = query.value(0).toDouble();
-      }
-
-//      qDebug() << "list size" << list_distf->length();
-//      QTime time; time.start();
-//      int idx = list_distf->binary_search_distf(0.5);
-//      qDebug() << "idx 1" << idx << ("(" + QString::number((*list_distf)[idx]->distf) + ")") ;
-//      idx = list_distf->binary_search_distf(0.0);
-//      qDebug() << "idx 2" << idx << ("(" + QString::number((*list_distf)[idx]->distf) + ")") ;
-//      idx = list_distf->binary_search_distf(99.0);
-//      qDebug() << "idx 3" << idx << ("(" + QString::number((*list_distf)[idx]->distf) + ")") ;
-//      qDebug() << "Searching time:" << (time.elapsed()/1000.0);
-
-      double d_rowcount_distf = rowcount_distf + 1;
-      double d_rowcount_dists = rowcount_dists + 1;
-      ++rowcount_distf;
-      ++rowcount_dists;
-
-      qUpdate.exec("BEGIN TRANSACTION;");
-
-      //
-      // update previous distf
-      //
-      if (rowcount_distf > 0) {
-        QString sql_update_prev = "update bardata set " + distf_column_name + "=? where rowid=?";
-        QString sql_select_prev = "select rowid, n_distcf from bardata where date_<'" + _year + "-01-01' and n_distcf" + search_operator + "0";
-//        QString sql_select_prev = "select rowid, distcf from bardata where date_<'" + _year + "-01-01'";
-        query.exec(sql_select_prev);
-        v_distf.clear();
-        v_rowid.clear();
-
-        while (query.next()) {
-          distf_rank = list_distf->binary_search_distf(query.value(1).toDouble()) / d_rowcount_distf;
-          v_distf.append(QString::number(distf_rank,'f',4));
-          v_rowid.append(query.value(0).toInt());
-          if (v_rowid.count() >= 50000) {
-            qUpdate.prepare(sql_update_prev);
-            qUpdate.addBindValue(v_distf);
-            qUpdate.addBindValue(v_rowid);
-            qUpdate.execBatch();
-            v_distf.clear();
-            v_rowid.clear();
-          }
-        }
-
-        if (v_rowid.count() > 0) {
-          qUpdate.prepare(sql_update_prev);
-          qUpdate.addBindValue(v_distf);
-          qUpdate.addBindValue(v_rowid);
-          qUpdate.execBatch();
-          v_distf.clear();
-          v_rowid.clear();
-        }
-      }
-
-      //
-      // update previous dists
-      //
-      BarDataList *list_dists = new BarDataList();
-      query.exec("select dists from " + tempTableDistS + " order by dists asc");
-      while (query.next()) {
-        res = list_dists->getNextItem();
-        res->dists = query.value(0).toDouble();
-      }
-
-      if (rowcount_dists > 0) {
-        QString sql_update_prev = "update bardata set " + dists_column_name + "=? where rowid=?";
-        QString sql_select_prev = "select rowid, n_distcs from bardata where date_<'" + _year + "-01-01' and n_distcs" + search_operator + "0";
-//        QString sql_select_prev = "select rowid, distcs from bardata where date_<'" + _year + "-01-01'";
-        query.exec(sql_select_prev);
-        v_dists.clear();
-        v_rowid.clear();
-
-        while (query.next()) {
-          dists_rank = list_distf->binary_search_dists(query.value(1).toDouble()) / d_rowcount_dists;
-          v_dists.append(QString::number(dists_rank,'f',4));
-          v_rowid.append(query.value(0).toInt());
-          if (v_rowid.count() >= 50000) {
-            qUpdate.prepare(sql_update_prev);
-            qUpdate.addBindValue(v_dists);
-            qUpdate.addBindValue(v_rowid);
-            qUpdate.execBatch();
-            v_dists.clear();
-            v_rowid.clear();
-          }
-        }
-
-        if (v_rowid.count() > 0) {
-          qUpdate.prepare(sql_update_prev);
-          qUpdate.addBindValue(v_dists);
-          qUpdate.addBindValue(v_rowid);
-          qUpdate.execBatch();
-          v_dists.clear();
-          v_rowid.clear();
-        }
-      }
-
-      qUpdate.exec("COMMIT;");
-      query.exec("DETACH DATABASE " + tempDatabaseName);
-
-      delete list_distf;
-      list_distf = NULL;
-
-      delete list_dists;
-      list_dists = NULL;
-    }*/
-
-    // experimental
-    /*static void update_distcf_v3(const QSqlDatabase &database, const int &year) {
-      QSqlQuery qUpdate(database);
-      QSqlQuery query_1(database);
-      QSqlQuery query_2(database);
-      QSqlQuery query_3(database);
-      QSqlQuery query_4(database);
-      QVariantList rowid_1;
-      QVariantList rowid_2;
-      QVariantList rank_1;
-      QVariantList rank_2;
-      QString sql_select_1;
-      QString sql_select_2;
-      QString sql_select_3;
-      QString sql_select_4;
-      QString sql_update_1 = "update bardata set DistCF_" + QString::number(year) + "=? where rowid=?";
-      double count_1;
-      double count_2;
-      long i = 0;
-      bool b1;
-      bool b2;
-      bool b3;
-      bool b4;
-
-      sql_select_1 = "select count(1) from bardata where date_>='"+ QString::number(year) + "-01-01' and distcf>0";
-      sql_select_2 = "select count(1) from bardata where date_>='"+ QString::number(year) + "-01-01' and distcf<0";
-
-      query_1.setForwardOnly(true);
-      query_2.setForwardOnly(true);
-      query_3.setForwardOnly(true);
-      query_4.setForwardOnly(true);
-
-      query_1.exec(sql_select_1);
-      count_1 = query_1.next()? query_1.value(0).toDouble() : 0;
-
-      query_1.exec(sql_select_2);
-      count_2 = query_1.next()? query_1.value(0).toDouble() : 0;
-
-      sql_select_1 =
-        "select rowid from bardata where date_>='"+ QString::number(year) + "-01-01' and "
-        "distcf>0 order by n_distcf asc";
-
-      sql_select_2 =
-        "select rowid from bardata where date_>='"+ QString::number(year) + "-01-01' and "
-        "distcf<0 order by n_distcf desc";
-
-      query_1.exec(sql_select_1);
-      query_2.exec(sql_select_2);
-
-      qUpdate.exec("PRAGMA journal_mode = OFF;");
-      qUpdate.exec("PRAGMA synchronous = OFF;");
-      qUpdate.exec("PRAGMA cache_size = 80000;");
-      qUpdate.exec("BEGIN TRANSACTION;");
-
-      while (true) {
-        b1 = query_1.next();
-        b2 = query_2.next();
-        if (!b1 && !b2) break;
-
-        if (b1) {
-          rowid_1.append(query_1.value(0).toInt());
-          rank_1.append(QString::number(i/count_1,'f',4));
-        }
-
-        if (b2) {
-          rowid_2.append(query_2.value(0).toInt());
-          rank_2.append(QString::number(i/count_2,'f',4));
-        }
-
-        if (rowid_1.size() >= 50000) {
-          qUpdate.prepare(sql_update_1);
-          qUpdate.addBindValue(rank_1);
-          qUpdate.addBindValue(rowid_1);
-          qUpdate.execBatch();
-          rank_1.clear();
-          rowid_1.clear();
-        }
-
-        if (rowid_2.size() >= 50000) {
-          qUpdate.prepare(sql_update_1);
-          qUpdate.addBindValue(rank_2);
-          qUpdate.addBindValue(rowid_2);
-          qUpdate.execBatch();
-          rank_2.clear();
-          rowid_2.clear();
-        }
-
-        ++i;
-      }
-
-      if (rowid_1.size() > 0) {
-        qUpdate.prepare(sql_update_1);
-        qUpdate.addBindValue(rank_1);
-        qUpdate.addBindValue(rowid_1);
-        qUpdate.execBatch();
-        rowid_1.clear();
-        rank_1.clear();
-      }
-
-      if (rowid_2.size() > 0) {
-        qUpdate.prepare(sql_update_1);
-        qUpdate.addBindValue(rank_2);
-        qUpdate.addBindValue(rowid_2);
-        qUpdate.execBatch();
-        rowid_2.clear();
-        rank_2.clear();
-      }
-
-      qUpdate.exec("COMMIT;");
-
-
-      //
-      // Update previous
-      //
-
-      sql_select_1 =
-        "select rowid, n_distcf from bardata where date_<'"+ QString::number(year) + "-01-01' and "
-        "distcf>0 order by n_distcf asc";
-
-      sql_select_2 =
-        "select rowid, n_distcf from bardata where date_<'"+ QString::number(year) + "-01-01' and "
-        "distcf<0 order by n_distcf desc";
-
-      sql_select_3 =
-        "select n_distcf from bardata where date_>='"+ QString::number(year) + "-01-01' and "
-        "distcf>0 order by n_distcf asc";
-
-      sql_select_4 =
-        "select n_distcf from bardata where date_>='"+ QString::number(year) + "-01-01' and "
-        "distcf<0 order by n_distcf desc";
-
-      query_1.exec(sql_select_1);
-      query_2.exec(sql_select_2);
-      query_3.exec(sql_select_3);
-      query_4.exec(sql_select_4);
-      b3 = query_3.next();
-      b4 = query_4.next();
-
-      qUpdate.exec("PRAGMA journal_mode = OFF;");
-      qUpdate.exec("PRAGMA synchronous = OFF;");
-      qUpdate.exec("PRAGMA cache_size = 80000;");
-      qUpdate.exec("BEGIN TRANSACTION;");
-
-      long count_H0 = 0;
-      long count_H1 = 0;
-      double distCF;
-
-      while (true) {
-        b1 = query_1.next();
-        b2 = query_2.next();
-        if (!b1 && !b2) break;
-
-        if (b1) {
-          distCF = query_1.value(1).toDouble();
-
-          while (b3 && query_3.value(0).toDouble() <= distCF) {
-            ++count_H0;
-            b3 = query_3.next();
-          }
-
-          rowid_1.append(query_1.value(0).toInt());
-          rank_1.append(QString::number(count_H0 / (count_1 + 1),'f',4));
-        }
-
-        if (b2) {
-          distCF = query_2.value(1).toDouble();
-
-          while (b4 && query_4.value(0).toDouble() >= distCF) {
-            ++count_H1;
-            b4 = query_4.next();
-          }
-
-          rowid_2.append(query_2.value(0).toInt());
-          rank_2.append(QString::number(count_H1 / (count_2 + 1),'f',4));
-        }
-
-        if (rowid_1.size() >= 50000) {
-          qUpdate.prepare(sql_update_1);
-          qUpdate.addBindValue(rank_1);
-          qUpdate.addBindValue(rowid_1);
-          qUpdate.execBatch();
-          rowid_1.clear();
-          rank_1.clear();
-        }
-
-        if (rowid_2.size() >= 50000) {
-          qUpdate.prepare(sql_update_1);
-          qUpdate.addBindValue(rank_2);
-          qUpdate.addBindValue(rowid_2);
-          qUpdate.execBatch();
-          rowid_2.clear();
-          rank_2.clear();
-        }
-      }
-
-      if (rowid_1.size() > 0) {
-        qUpdate.prepare(sql_update_1);
-        qUpdate.addBindValue(rank_1);
-        qUpdate.addBindValue(rowid_1);
-        qUpdate.execBatch();
-        rowid_1.clear();
-        rank_1.clear();
-      }
-
-      if (rowid_2.size() > 0) {
-        qUpdate.prepare(sql_update_1);
-        qUpdate.addBindValue(rank_2);
-        qUpdate.addBindValue(rowid_2);
-        qUpdate.execBatch();
-        rowid_2.clear();
-        rank_2.clear();
-      }
-
-      qUpdate.exec("COMMIT;");
     }*/
 
     static void update_distOHLC_v3(const QSqlDatabase &database, const int &year, const QString &column_dist, const QString &column_n_dist) {
@@ -2386,7 +1464,7 @@ class BarDataAdapter {
       qUpdate.exec("COMMIT;");
     }
 
-    static void update_rank_fgs_fls(const QSqlDatabase &database) {
+    static void update_fgs_fls_rank(const QSqlDatabase &database) {
       QSqlQuery query(database);
       QSqlQuery qUpdate(database);
       QVariantList v_fgs;
@@ -2452,61 +1530,83 @@ class BarDataAdapter {
       qUpdate.exec("COMMIT;");
     }
 
+    //
+    // Dist(FS-Cross), Dist(F-S), ATR
+    //
     static void update_rank_distfs_distcc_atr(const QSqlDatabase &database) {
       QSqlQuery qUpdate(database);
       QSqlQuery query_1(database);
       QSqlQuery query_2(database);
-      QSqlQuery query_3(database);
-      QVariantList distFS_rank;
-      QVariantList distCC_rank;
+      QSqlQuery query_3a(database);
+      QSqlQuery query_3b(database);
       QVariantList atr_rank;
+      QVariantList distFS_rank;
+      QVariantList distCC_rank_1;
+      QVariantList distCC_rank_2;
       QVariantList rowid_1;
       QVariantList rowid_2;
-      QVariantList rowid_3;
+      QVariantList rowid_3a;
+      QVariantList rowid_3b;
       QString sql_update_1 = "update bardata set " + SQLiteHandler::COLUMN_NAME_DISTFS_RANK + "=? where rowid=?";
-      QString sql_update_2 = "update bardata set " + SQLiteHandler::COLUMN_NAME_DISTCC_FSCROSS_RANK + "=? where rowid=?";
-      QString sql_update_3 = "update bardata set " + SQLiteHandler::COLUMN_NAME_ATR_RANK + "=? where rowid=?";
+      QString sql_update_2 = "update bardata set " + SQLiteHandler::COLUMN_NAME_ATR_RANK + "=? where rowid=?";
+      QString sql_update_3 = "update bardata set " + SQLiteHandler::COLUMN_NAME_DISTCC_FSCROSS_RANK + "=? where rowid=?";
+      double count;
+      double count_3a;
+      double count_3b;
       long i = 0;
-      bool b1;
-      bool b2;
-      bool b3;
+      bool b1, b3a, b2, b3b;
 
       query_1.setForwardOnly(true);
       query_2.setForwardOnly(true);
-      query_3.setForwardOnly(true);
+      query_3a.setForwardOnly(true);
+      query_3b.setForwardOnly(true);
 
       query_1.exec("select count(1) from bardata");
-      const double count = query_1.next()? query_1.value(0).toDouble() : 0;
+      count = query_1.next()? query_1.value(0).toDouble() : 0;
+
+      query_1.exec("select count(1) from bardata where DistCC_FSCross_ATR > 0");
+      count_3a = query_1.next()? query_1.value(0).toDouble() : 0;
+
+      query_1.exec("select count(1) from bardata where DistCC_FSCross_ATR < 0");
+      count_3b = query_1.next()? query_1.value(0).toDouble() : 0;
 
       query_1.exec("select rowid from bardata order by N_DistFS asc, rowid asc");
-      query_2.exec("select rowid from bardata order by DistCC_FSCross asc, rowid asc");
-      query_3.exec("select rowid from bardata order by ATR asc, rowid asc");
+      query_2.exec("select rowid from bardata order by ATR asc, rowid asc");
+      query_3a.exec("select rowid from bardata where DistCC_FSCross_ATR > 0 order by DistCC_FSCross_ATR asc, rowid asc");
+      query_3b.exec("select rowid from bardata where DistCC_FSCross_ATR < 0 order by DistCC_FSCross_ATR desc, rowid asc");
 
       qUpdate.setForwardOnly(true);
       qUpdate.exec("PRAGMA journal_mode = OFF;");
       qUpdate.exec("PRAGMA synchronous = OFF;");
       qUpdate.exec("PRAGMA cache_size = 50000;");
       qUpdate.exec("BEGIN TRANSACTION;");
+      qUpdate.exec("update bardata set " + SQLiteHandler::COLUMN_NAME_DISTCC_FSCROSS_RANK + "=0 where DistCC_FSCross_ATR=0");
 
-      while (true) {
+      while ( true ) {
         b1 = query_1.next();
         b2 = query_2.next();
-        b3 = query_3.next();
-        if (!b1 && !b2 && !b3) break;
+        b3a = query_3a.next();
+        b3b = query_3b.next();
+        if (!b1 && !b2 && !b3a && !b3b) break;
 
         if (b1) {
           rowid_1.append(query_1.value(0).toString());
-          distFS_rank.append(QString::number(i / count,'f',4));
+          distFS_rank.append(QString::number(i / count, 'f', 4));
         }
 
         if (b2) {
           rowid_2.append(query_2.value(0).toString());
-          distCC_rank.append(QString::number(i / count,'f',4));
+          atr_rank.append(QString::number(i / count, 'f', 4));
         }
 
-        if (b3) {
-          rowid_3.append(query_3.value(0).toString());
-          atr_rank.append(QString::number(i / count,'f',4));
+        if (b3a) {
+          rowid_3a.append(query_3a.value(0).toString());
+          distCC_rank_1.append(QString::number(i / count_3a, 'f', 4));
+        }
+
+        if (b3b) {
+          rowid_3b.append(query_3b.value(0).toString());
+          distCC_rank_2.append(QString::number(i / count_3b, 'f', 4));
         }
 
         if (rowid_1.count() >= 80000) {
@@ -2520,20 +1620,29 @@ class BarDataAdapter {
 
         if (rowid_2.count() >= 80000) {
           qUpdate.prepare(sql_update_2);
-          qUpdate.addBindValue(distCC_rank);
+          qUpdate.addBindValue(atr_rank);
           qUpdate.addBindValue(rowid_2);
           qUpdate.execBatch();
-          distCC_rank.clear();
+          atr_rank.clear();
           rowid_2.clear();
         }
 
-        if (rowid_3.count() >= 80000) {
+        if (rowid_3a.count() >= 80000) {
           qUpdate.prepare(sql_update_3);
-          qUpdate.addBindValue(atr_rank);
-          qUpdate.addBindValue(rowid_3);
+          qUpdate.addBindValue(distCC_rank_1);
+          qUpdate.addBindValue(rowid_3a);
           qUpdate.execBatch();
-          atr_rank.clear();
-          rowid_3.clear();
+          distCC_rank_1.clear();
+          rowid_3a.clear();
+        }
+
+        if (rowid_3b.count() >= 80000) {
+          qUpdate.prepare(sql_update_3);
+          qUpdate.addBindValue(distCC_rank_2);
+          qUpdate.addBindValue(rowid_3b);
+          qUpdate.execBatch();
+          distCC_rank_2.clear();
+          rowid_3b.clear();
         }
 
         ++i;
@@ -2550,21 +1659,29 @@ class BarDataAdapter {
 
       if (rowid_2.count() > 0) {
         qUpdate.prepare(sql_update_2);
-        qUpdate.addBindValue(distCC_rank);
+        qUpdate.addBindValue(atr_rank);
         qUpdate.addBindValue(rowid_2);
         qUpdate.execBatch();
-        distCC_rank.clear();
+        atr_rank.clear();
         rowid_2.clear();
       }
 
-
-      if (rowid_3.count() > 0) {
+      if (rowid_3a.count() > 0) {
         qUpdate.prepare(sql_update_3);
-        qUpdate.addBindValue(atr_rank);
-        qUpdate.addBindValue(rowid_3);
+        qUpdate.addBindValue(distCC_rank_1);
+        qUpdate.addBindValue(rowid_3a);
         qUpdate.execBatch();
-        atr_rank.clear();
-        rowid_3.clear();
+        distCC_rank_1.clear();
+        rowid_3a.clear();
+      }
+
+      if (rowid_3b.count() > 0) {
+        qUpdate.prepare(sql_update_3);
+        qUpdate.addBindValue(distCC_rank_2);
+        qUpdate.addBindValue(rowid_3b);
+        qUpdate.execBatch();
+        distCC_rank_2.clear();
+        rowid_3b.clear();
       }
 
       qUpdate.exec("COMMIT;");
@@ -2632,7 +1749,7 @@ class BarDataAdapter {
       query.exec("COMMIT;");
     }
 
-    static void update_rank_candle(const QSqlDatabase &database) {
+    static void update_candle_rank(const QSqlDatabase &database) {
       QSqlQuery qUpdate(database);
       QSqlQuery query_1(database);
       QSqlQuery query_2(database);
@@ -2741,8 +1858,10 @@ class BarDataAdapter {
       qUpdate.exec("COMMIT");
     }
 
-    // also DistCC(FS-Cross) intraday
-    static void update_daterange(const QSqlDatabase &database, const QString &symbol, const IntervalWeight &base_interval) {
+    //
+    // DateRange, DistCC(FS-Cross) intraday, and PrevDailyATR
+    //
+    static void update_daterange(const QSqlDatabase &database, const QString &database_path, const QString &symbol, const IntervalWeight &base_interval) {
       //
       // process intraday only
       //
@@ -2754,33 +1873,52 @@ class BarDataAdapter {
       QVariantList v_rowid;
       QVariantList v_daterange;
       QVariantList v_distCC;
-      QString database_path = QCoreApplication::applicationDirPath() + "/" + SQLiteHandler::getDatabaseName(symbol, WEIGHT_DAILY);
-      QString database_path_2 = QCoreApplication::applicationDirPath() + "/" + SQLiteHandler::getDatabaseName(symbol, WEIGHT_60MIN);
+      QVariantList v_prevatr;
+      QString dbdaily_path = database_path + "/" + SQLiteHandler::getDatabaseName(symbol, WEIGHT_DAILY);
+      QString db60min_path = database_path + "/" + SQLiteHandler::getDatabaseName(symbol, WEIGHT_60MIN);
+      QString db5min_path = database_path + "/" + SQLiteHandler::getDatabaseName(symbol, WEIGHT_5MIN);
       QString sql_select;
       QString sql_update =
         "update bardata set " +
           SQLiteHandler::COLUMN_NAME_DATERANGE + "=?," +
-          SQLiteHandler::COLUMN_NAME_DISTCC_FSCROSS + "=? where rowid=?";
+          SQLiteHandler::COLUMN_NAME_DISTCC_FSCROSS + "=?," +
+          SQLiteHandler::COLUMN_NAME_PREV_DAILY_ATR + "=?" +
+        " where rowid=?";
 
       if (base_interval == WEIGHT_60MIN) {
         sql_select =
-          "select a.rowid, b.rowid, round(a." + SQLiteHandler::COLUMN_NAME_DISTCC_FSCROSS + "/" +
-                                         "b." + SQLiteHandler::COLUMN_NAME_ATR + ",4) from bardata a"
-          " join dbDaily.bardata b on a._parent=b.rowid"
+          "select a.rowid, b.rowid,"
+          "round(a." + SQLiteHandler::COLUMN_NAME_DISTCC_FSCROSS + "/" +
+                "b." + SQLiteHandler::COLUMN_NAME_ATR + ",4), b.ATR"
+          " from bardata a"
+          " join dbDaily.bardata b on a._parent_prev=b.rowid"
           " order by a.rowid";
       } else if (base_interval == WEIGHT_5MIN) {
         sql_select =
-          "select a.rowid, b.rowid, round(a." + SQLiteHandler::COLUMN_NAME_DISTCC_FSCROSS + "/" +
-                                         "b." + SQLiteHandler::COLUMN_NAME_ATR + ",4) from bardata a"
+          "select a.rowid, b.rowid,"
+          "round(a." + SQLiteHandler::COLUMN_NAME_DISTCC_FSCROSS + "/" +
+                "b." + SQLiteHandler::COLUMN_NAME_ATR + ",4), b.ATR"
+          " from bardata a"
           " join db60min.bardata x on a._parent=x.rowid"
-          " join dbDaily.bardata b on x._parent=b.rowid"
+          " join dbDaily.bardata b on x._parent_prev=b.rowid"
+          " order by a.rowid";
+      } else if (base_interval == WEIGHT_1MIN) {
+        sql_select =
+          "select a.rowid, b.rowid,"
+          "round(a." + SQLiteHandler::COLUMN_NAME_DISTCC_FSCROSS + "/" +
+                "b." + SQLiteHandler::COLUMN_NAME_ATR + ",4), b.ATR"
+          " from bardata a"
+          " join db5min.bardata y on a._parent=y.rowid"
+          " join db60min.bardata x on y._parent=x.rowid"
+          " join dbDaily.bardata b on x._parent_prev=b.rowid"
           " order by a.rowid";
       }
 
       query2.setForwardOnly(true);
       query.setForwardOnly(true);
-      query.exec("ATTACH DATABASE '" + database_path + "' AS dbDaily");
-      query.exec("ATTACH DATABASE '" + database_path_2 + "' AS db60min");
+      query.exec("ATTACH DATABASE '" + dbdaily_path + "' AS dbDaily");
+      query.exec("ATTACH DATABASE '" + db60min_path + "' AS db60min");
+      query.exec("ATTACH DATABASE '" + db5min_path + "' AS db5min");
       query.exec(sql_select);
       if (query.lastError().isValid()) qDebug() << query.lastError();
 
@@ -2793,7 +1931,7 @@ class BarDataAdapter {
         if (base_interval == WEIGHT_60MIN) {
           sql_select =
             "select a.rowid, round((max(a.high_)-min(a.low_))/b.ATR,4)"
-            " from bardata a join dbDaily.bardata b on a._parent=b.rowid"
+            " from bardata a join dbDaily.bardata b on a._parent_prev=b.rowid"
             " where a.rowid<=" + query.value(0).toString() + " and b.rowid=" + query.value(1).toString() +
             " group by b.rowid";
         } else if (base_interval == WEIGHT_5MIN) {
@@ -2801,7 +1939,7 @@ class BarDataAdapter {
             "select a.rowid, round((max(a.high_)-min(a.low_))/b.ATR,4)"
             " from bardata a"
             " join db60min.bardata x on a._parent=x.rowid"
-            " join dbDaily.bardata b on x._parent=b.rowid"
+            " join dbDaily.bardata b on x._parent_prev=b.rowid"
             " where a.rowid<=" + query.value(0).toString() + " and b.rowid=" + query.value(1).toString() +
             " group by b.rowid";
         }
@@ -2809,18 +1947,21 @@ class BarDataAdapter {
         query2.exec(sql_select);
         query2.next();
 
-        v_rowid.append(query.value(0).toString());
-        v_distCC.append(query.value(2).toString());
-        v_daterange.append(QString::number(query2.value(1).toDouble(),'f',4));
+        v_rowid.append( query.value(0).toString() );
+        v_distCC.append( query.value(2).toString() );
+        v_daterange.append( QString::number( query2.value(1).toDouble() , 'f' , 4 ) );
+        v_prevatr.append( query.value(3).toDouble() );
 
         if (v_rowid.size() >= 100000) {
           qUpdate.prepare(sql_update);
           qUpdate.addBindValue(v_daterange);
           qUpdate.addBindValue(v_distCC);
+          qUpdate.addBindValue(v_prevatr);
           qUpdate.addBindValue(v_rowid);
           qUpdate.execBatch();
           v_daterange.clear();
           v_distCC.clear();
+          v_prevatr.clear();
           v_rowid.clear();
         }
       }
@@ -2829,26 +1970,31 @@ class BarDataAdapter {
         qUpdate.prepare(sql_update);
         qUpdate.addBindValue(v_daterange);
         qUpdate.addBindValue(v_distCC);
+        qUpdate.addBindValue(v_prevatr);
         qUpdate.addBindValue(v_rowid);
         qUpdate.execBatch();
         v_daterange.clear();
         v_distCC.clear();
+        v_prevatr.clear();
         v_rowid.clear();
       }
 
       qUpdate.exec("COMMIT;");
     }
 
-    static void update_dist_resistance(const QSqlDatabase &database, const QString &symbol, const IntervalWeight &base_interval, const int &id_threshold) {
+    // DistResistance using Max(Resistance) and Pre-Date
+    static void update_dist_resistance(const QSqlDatabase &database, const QString &database_path,
+                                       const QString &symbol, const IntervalWeight &base_interval, const int &id_threshold) {
       QSqlQuery query(database);
       QSqlQuery qUpdate(database);
       QVariantList rowid;
       QVariantList value1;
       QVariantList value2;
       QVariantList value3;
-      QString application_path = QCoreApplication::applicationDirPath() + "/";
-      QString database_path_1 = application_path + SQLiteHandler::getDatabaseName(symbol, WEIGHT_DAILY);
-      QString database_path_2 = application_path + SQLiteHandler::getDatabaseName(symbol, WEIGHT_60MIN);
+      QString database_path_1 = database_path + "/" + SQLiteHandler::getDatabaseName(symbol, WEIGHT_DAILY);
+      QString database_path_2 = database_path + "/" + SQLiteHandler::getDatabaseName(symbol, WEIGHT_60MIN);
+      QString database_path_3 = database_path + "/" + SQLiteHandler::getDatabaseName(symbol, WEIGHT_5MIN);
+      // TODO: use zero based index in next version
       QString distres = "DistRes_" + QString::number(id_threshold+1);
       QString distres_rank = "DistResRank_" + QString::number(id_threshold+1);
       QString distres_atr = "DistResATR_" + QString::number(id_threshold+1);
@@ -2858,26 +2004,36 @@ class BarDataAdapter {
       QString sql_update_2 = "update bardata set " + distres_rank + "=? where rowid=?";
 
       if (base_interval < WEIGHT_DAILY) {
-        sql_select += "select a.rowid, round(abs(min(b.resistance)-a.close_),4), min(b.resistance),"
-                      "round(abs(min(b.resistance)-a.close_)/y.ATR,6) from bardata a";
+        sql_select += "select a.rowid,"
+                       "round(abs(max(b.resistance)-a.close_),4),"
+                       "max(b.resistance),"
+                       "round(abs(max(b.resistance)-a.close_)/y.ATR,6)"
+                      " from bardata a";
 
         if (base_interval < WEIGHT_60MIN) {
           // 5min
           sql_select += " join db60min.bardata x on a._parent=x.rowid";
-          sql_select += " join dbDaily.bardata y on x._parent=y.rowid";
+          sql_select += " join dbDaily.bardata y on x._parent_prev=y.rowid";
+        } else if (base_interval < WEIGHT_5MIN) {
+          // 1min
+          sql_select += " join db5min.bardata z on a._parent=z.rowid";
+          sql_select += " join db60min.bardata x on z._parent=x.rowid";
+          sql_select += " join dbDaily.bardata y on x._parent_prev=y.rowid";
         } else {
           // 60min
-          sql_select += " join dbDaily.bardata y on a._parent=y.rowid";
+          sql_select += " join dbDaily.bardata y on a._parent_prev=y.rowid";
         }
 
         sql_select +=
-          " join dbdaily.resistancedata b on y.prevdate=b.date_ and y.prevtime=b.time_"
+          " join dbdaily.resistancedata b on y.date_=b.date_ and y.time_=b.time_"
           " where b.resistance_count>=3"
           " group by a.rowid";
       } else {
         sql_select =
-          "select a.rowid, round(abs(min(b.resistance)-a.close_), 4), min(b.resistance),"
-          "round(abs(min(b.resistance)-a.close_)/a.ATR,6)"
+          "select a.rowid,"
+           "round(abs(max(b.resistance)-a.close_), 4),"
+           "max(b.resistance),"
+           "round(abs(max(b.resistance)-a.close_)/a.ATR,6)"
           " from bardata a join resistancedata b on a.prevdate=b.date_ and a.prevtime=b.time_"
           " where b.resistance_count>=3"
           " group by a.rowid";
@@ -2886,6 +2042,7 @@ class BarDataAdapter {
       query.setForwardOnly(true);
       query.exec("ATTACH DATABASE '" + database_path_1 + "' AS dbDaily");
       query.exec("ATTACH DATABASE '" + database_path_2 + "' AS db60min");
+      query.exec("ATTACH DATABASE '" + database_path_3 + "' AS db5min");
       query.exec(sql_select);
       if (query.lastError().isValid()) qDebug() << query.lastError();
 
@@ -2893,7 +2050,7 @@ class BarDataAdapter {
       qUpdate.exec("PRAGMA synchronous = OFF;");
       qUpdate.exec("BEGIN TRANSACTION;");
 
-      while (query.next()) {
+      while ( query.next() ) {
         rowid.append(query.value(0).toString());
         value1.append(query.value(1).toString());
         value2.append(query.value(2).toString());
@@ -2912,7 +2069,7 @@ class BarDataAdapter {
         }
       }
 
-      if (rowid.size() > 0) {
+      if ( rowid.size() > 0 ) {
         qUpdate.prepare(sql_update_1);
         qUpdate.addBindValue(value1);
         qUpdate.addBindValue(value2);
@@ -2937,7 +2094,7 @@ class BarDataAdapter {
 
       query.exec("select rowid from bardata where " + distres_atr + " is not null order by " + distres_atr);
 
-      while (query.next()) {
+      while ( query.next() ) {
         rowid.append(query.value(0).toString());
         value1.append(QString::number(i++/count,'f',4));
         if (rowid.size() >= 50000) {
@@ -2950,7 +2107,7 @@ class BarDataAdapter {
         }
       }
 
-      if (rowid.size() > 0) {
+      if ( rowid.size() > 0 ) {
         qUpdate.prepare(sql_update_2);
         qUpdate.addBindValue(value1);
         qUpdate.addBindValue(rowid);
@@ -2962,47 +2119,60 @@ class BarDataAdapter {
       qUpdate.exec("COMMIT;");
     }
 
-    static void update_dist_support(const QSqlDatabase &database, const QString &symbol, const IntervalWeight &base_interval, const int &id_threshold) {
+    // DistSupport using Min(Support) and Pre-Date
+    static void update_dist_support(const QSqlDatabase &database, const QString &database_path,
+                                    const QString &symbol, const IntervalWeight &base_interval, const int &id_threshold) {
       QSqlQuery query(database);
       QSqlQuery qUpdate(database);
       QVariantList rowid;
       QVariantList value1;
       QVariantList value2;
       QVariantList value3;
-      QString application_path = QCoreApplication::applicationDirPath() + "/";
-      QString database_path_1 = application_path + SQLiteHandler::getDatabaseName(symbol, WEIGHT_DAILY);
-      QString database_path_2 = application_path + SQLiteHandler::getDatabaseName(symbol, WEIGHT_60MIN);
-      QString distsup = "DistSup_" + QString::number(id_threshold+1);
-      QString distsup_rank = "DistSupRank_" + QString::number(id_threshold+1);
-      QString distsup_atr = "DistSupATR_" + QString::number(id_threshold+1);
-      QString sup_value = "Sup_" + QString::number(id_threshold+1);
+      QString database_path_1 = database_path + "/" + SQLiteHandler::getDatabaseName(symbol, WEIGHT_DAILY);
+      QString database_path_2 = database_path + "/" + SQLiteHandler::getDatabaseName(symbol, WEIGHT_60MIN);
+      QString database_path_3 = database_path + "/" + SQLiteHandler::getDatabaseName(symbol, WEIGHT_5MIN);
+      // TODO: use zero base index in next version
+      QString distsup = "DistSup_" + QString::number(id_threshold + 1);
+      QString distsup_rank = "DistSupRank_" + QString::number(id_threshold + 1);
+      QString distsup_atr = "DistSupATR_" + QString::number(id_threshold + 1);
+      QString sup_value = "Sup_" + QString::number(id_threshold + 1);
       QString sql_update_1 = "update bardata set " + distsup + "=?," + sup_value +  "=?," + distsup_atr + "=? where rowid=?";
       QString sql_update_2 = "update bardata set " + distsup_rank + "=? where rowid=?";
       QString sql_select;
 
       if (base_interval < WEIGHT_DAILY) {
-        sql_select += "select a.rowid, round(abs(max(b.support)-a.close_),4), max(b.support),"
-                      "round(abs(max(b.support)-a.close_)/y.ATR,6)"
+        sql_select += "select a.rowid,"
+                       "round(abs(min(b.support)-a.close_),4),"
+                       "min(b.support),"
+                       "round(abs(min(b.support)-a.close_)/y.ATR,6)"
                       " from bardata a";
 
         if (base_interval < WEIGHT_60MIN) {
           // 5min
           sql_select +=
             " join db60min.bardata x on a._parent=x.rowid"
-            " join dbDaily.bardata y on x._parent=y.rowid";
+            " join dbDaily.bardata y on x._parent_prev=y.rowid";
+        } else if (base_interval < WEIGHT_5MIN) {
+          // 1min
+          sql_select +=
+            " join db5min.bardata z on a._parent=x.rowid"
+            " join db60min.bardata x on z._parent=x.rowid"
+            " join dbDaily.bardata y on x._parent_prev=y.rowid";
         } else {
           // 60min
-          sql_select += " join dbDaily.bardata y on a._parent=y.rowid";
+          sql_select += " join dbDaily.bardata y on a._parent_prev=y.rowid";
         }
 
         sql_select +=
-          " join dbDaily.supportdata b on y.prevdate=b.date_ and y.prevtime=b.time_"
+          " join dbDaily.supportdata b on y.date_=b.date_ and y.time_=b.time_"
           " where support_count>=3"
           " group by a.rowid";
       } else {
         sql_select =
-          "select a.rowid, round(abs(max(b.support)-a.close_),4), max(b.support),"
-          "round(abs(max(b.support)-a.close_)/a.ATR,6)"
+          "select a.rowid,"
+           "round(abs(min(b.support)-a.close_),4),"
+           "min(b.support),"
+           "round(abs(min(b.support)-a.close_)/a.ATR,6)"
           " from bardata a join supportdata b on a.prevdate=b.date_ and a.prevtime=b.time_"
           " where support_count>=3"
           " group by a.rowid";
@@ -3011,12 +2181,13 @@ class BarDataAdapter {
       query.setForwardOnly(true);
       query.exec("ATTACH DATABASE '" + database_path_1 + "' AS dbDaily");
       query.exec("ATTACH DATABASE '" + database_path_2 + "' AS db60min");
+      query.exec("ATTACH DATABASE '" + database_path_3 + "' AS db5min");
       query.exec(sql_select);
       qUpdate.exec("PRAGMA journal_mode = OFF;");
       qUpdate.exec("PRAGMA synchronous = OFF;");
       qUpdate.exec("BEGIN TRANSACTION;");
 
-      while (query.next()) {
+      while ( query.next() ) {
         rowid.append(query.value(0).toString());
         value1.append(query.value(1).toString());
         value2.append(query.value(2).toString());
@@ -3035,7 +2206,7 @@ class BarDataAdapter {
         }
       }
 
-      if (rowid.size() > 0) {
+      if ( rowid.size() > 0 ) {
         qUpdate.prepare(sql_update_1);
         qUpdate.addBindValue(value1);
         qUpdate.addBindValue(value2);
@@ -3060,7 +2231,7 @@ class BarDataAdapter {
 
       query.exec("select rowid from bardata where " + distsup_atr + " is not null order by " + distsup_atr);
 
-      while (query.next()) {
+      while ( query.next() ) {
         rowid.append(query.value(0).toString());
         value1.append(QString::number(i++/count,'f',4));
         if (rowid.size() >= 50000) {
@@ -3073,7 +2244,7 @@ class BarDataAdapter {
         }
       }
 
-      if (rowid.size() > 0) {
+      if ( rowid.size() > 0 ) {
         qUpdate.prepare(sql_update_2);
         qUpdate.addBindValue(value1);
         qUpdate.addBindValue(rowid);
@@ -3239,29 +2410,45 @@ class BarDataAdapter {
       qUpdate.exec("COMMIT;");
     }
 
-    static void update_zone(const QSqlDatabase &database, const QString &symbol, const IntervalWeight &base_interval) {
+    static void update_zone(const QSqlDatabase &database, const QString &database_path, const QString &symbol, const IntervalWeight &base_interval) {
       QSqlQuery query(database);
       QSqlQuery qUpdate(database);
       QStringList database_alias;
       QStringList table_alias;
       QStringList projection;
       QVariantList rowid;
-      QVariantList zone;
-      QVariantList zone_60min;
-      QVariantList zone_daily;
-      QVariantList zone_weekly;
-      QVariantList zone_monthly;
-      QString database_path;
+      QVariantList o_zone;
+      QVariantList o_zone_60min;
+      QVariantList o_zone_daily;
+      QVariantList o_zone_weekly;
+      QVariantList o_zone_monthly;
+      QVariantList h_zone;
+      QVariantList h_zone_60min;
+      QVariantList h_zone_daily;
+      QVariantList h_zone_weekly;
+      QVariantList h_zone_monthly;
+      QVariantList l_zone;
+      QVariantList l_zone_60min;
+      QVariantList l_zone_daily;
+      QVariantList l_zone_weekly;
+      QVariantList l_zone_monthly;
+      QVariantList c_zone;
+      QVariantList c_zone_60min;
+      QVariantList c_zone_daily;
+      QVariantList c_zone_weekly;
+      QVariantList c_zone_monthly;
+      QString local_database_path;
       QString sql_select = "";
       QString sql_update;
       IntervalWeight w = SQLiteHandler::get_parent_interval(base_interval);
-      double close;
+      double open, high, low, close;
       double fast;
       double slow;
       int index;
 
       query.setForwardOnly(true);
 
+      // Init dummy field name
       // Monthly, Weekly, Daily, 60min, 5min
       for (int i = 0; i < 5; ++i) {
         projection.append("0"); // Fast
@@ -3269,10 +2456,10 @@ class BarDataAdapter {
       }
 
       while (w != WEIGHT_INVALID) {
-        database_path = QCoreApplication::applicationDirPath() + "/" + SQLiteHandler::getDatabaseName(symbol,w);
+        local_database_path = database_path + "/" + SQLiteHandler::getDatabaseName(symbol, w);
         table_alias.append("t_" + SQLiteHandler::get_interval_name(w));
         database_alias.append("db" + table_alias.last());
-        query.exec("ATTACH DATABASE '" + database_path + "' AS " + database_alias.last());
+        query.exec("ATTACH DATABASE '" + local_database_path + "' AS " + database_alias.last());
 
         switch (w) {
           case WEIGHT_MONTHLY: index = 0; break;
@@ -3288,7 +2475,9 @@ class BarDataAdapter {
         w = SQLiteHandler::get_parent_interval(w);
       }
 
-      sql_select += "SELECT A.rowid, A.close_, A.fastavg, A.slowavg," + projection.join(",") + " FROM bardata A";
+      sql_select +=
+        "SELECT A.rowid, A.open_, A.high_, A.low_, A.close_, A.fastavg, A.slowavg," + projection.join(",") +
+        " FROM bardata A";
 
       if (database_alias.size() > 0) {
         QString prev_table_alias = table_alias[0];
@@ -3311,7 +2500,31 @@ class BarDataAdapter {
 //      qDebug() << sql_select;
 
       sql_update =
-        "update bardata set zone=?, zonemonthly=?, zoneweekly=?, zonedaily=?, zone60min=?"
+        "update bardata set"
+        " zone=?, zonemonthly=?, zoneweekly=?, zonedaily=?, zone60min=?," +
+          SQLiteHandler::COLUMN_NAME_OPEN_ZONE +"=?," +
+          SQLiteHandler::COLUMN_NAME_OPEN_ZONE_MONTHLY + "=?," +
+          SQLiteHandler::COLUMN_NAME_OPEN_ZONE_WEEKLY + "=?," +
+          SQLiteHandler::COLUMN_NAME_OPEN_ZONE_DAILY + "=?," +
+          SQLiteHandler::COLUMN_NAME_OPEN_ZONE_60MIN + "=?," +
+
+          SQLiteHandler::COLUMN_NAME_HIGH_ZONE +"=?," +
+          SQLiteHandler::COLUMN_NAME_HIGH_ZONE_MONTHLY + "=?," +
+          SQLiteHandler::COLUMN_NAME_HIGH_ZONE_WEEKLY + "=?," +
+          SQLiteHandler::COLUMN_NAME_HIGH_ZONE_DAILY + "=?," +
+          SQLiteHandler::COLUMN_NAME_HIGH_ZONE_60MIN + "=?," +
+
+          SQLiteHandler::COLUMN_NAME_LOW_ZONE +"=?," +
+          SQLiteHandler::COLUMN_NAME_LOW_ZONE_MONTHLY + "=?," +
+          SQLiteHandler::COLUMN_NAME_LOW_ZONE_WEEKLY + "=?," +
+          SQLiteHandler::COLUMN_NAME_LOW_ZONE_DAILY + "=?," +
+          SQLiteHandler::COLUMN_NAME_LOW_ZONE_60MIN + "=?," +
+
+          SQLiteHandler::COLUMN_NAME_CLOSE_ZONE +"=?," +
+          SQLiteHandler::COLUMN_NAME_CLOSE_ZONE_MONTHLY + "=?," +
+          SQLiteHandler::COLUMN_NAME_CLOSE_ZONE_WEEKLY + "=?," +
+          SQLiteHandler::COLUMN_NAME_CLOSE_ZONE_DAILY + "=?," +
+          SQLiteHandler::COLUMN_NAME_CLOSE_ZONE_60MIN + "=?" +
         " where rowid=?";
 
       qUpdate.exec("PRAGMA journal_mode = OFF;");
@@ -3321,97 +2534,157 @@ class BarDataAdapter {
 
       while (query.next()) {
         rowid.append(query.value(0).toInt());
-        close = query.value(1).toDouble();
-        fast = query.value(2).toDouble();
-        slow = query.value(3).toDouble();
+        open = query.value(1).toDouble();
+        high = query.value(2).toDouble();
+        low = query.value(3).toDouble();
+        close = query.value(4).toDouble();
+        fast = query.value(5).toDouble();
+        slow = query.value(6).toDouble();
 
-        zone.append(check_zone(close, fast, slow));
+        o_zone.append(check_zone(open, fast, slow));
+        o_zone_monthly.append(check_zone(open, query.value(7).toDouble(), query.value(8).toDouble()));
+        o_zone_weekly.append(check_zone(open, query.value(9).toDouble(), query.value(10).toDouble()));
+        o_zone_daily.append(check_zone(open, query.value(11).toDouble(), query.value(12).toDouble()));
+        o_zone_60min.append(check_zone(open, query.value(13).toDouble(), query.value(14).toDouble()));
 
-        fast = query.value(4).toDouble(); // M
-        slow = query.value(5).toDouble();
+        h_zone.append(check_zone(high, fast, slow));
+        h_zone_monthly.append(check_zone(high, query.value(7).toDouble(), query.value(8).toDouble()));
+        h_zone_weekly.append(check_zone(high, query.value(9).toDouble(), query.value(10).toDouble()));
+        h_zone_daily.append(check_zone(high, query.value(11).toDouble(), query.value(12).toDouble()));
+        h_zone_60min.append(check_zone(high, query.value(13).toDouble(), query.value(14).toDouble()));
 
-        if (fast > 0 && slow > 0) {
-          zone_monthly.append(check_zone(close, fast, slow));
-        } else {
-          zone_monthly.append(0);
-        }
+        l_zone.append(check_zone(low, fast, slow));
+        l_zone_monthly.append(check_zone(low, query.value(7).toDouble(), query.value(8).toDouble()));
+        l_zone_weekly.append(check_zone(low, query.value(9).toDouble(), query.value(10).toDouble()));
+        l_zone_daily.append(check_zone(low, query.value(11).toDouble(), query.value(12).toDouble()));
+        l_zone_60min.append(check_zone(low, query.value(13).toDouble(), query.value(14).toDouble()));
 
-        fast = query.value(6).toDouble(); // W
-        slow = query.value(7).toDouble();
-
-        if (fast > 0 && slow > 0) {
-          zone_weekly.append(check_zone(close, fast, slow));
-        } else {
-          zone_weekly.append(0);
-        }
-
-        fast = query.value(8).toDouble(); // D
-        slow = query.value(9).toDouble();
-
-        if (fast > 0 && slow > 0) {
-          zone_daily.append(check_zone(close, fast, slow));
-        } else {
-          zone_daily.append(0);
-        }
-
-        fast = query.value(10).toDouble(); // 60
-        slow = query.value(11).toDouble();
-
-        if (fast > 0 && slow > 0) {
-          zone_60min.append(check_zone(close, fast, slow));
-        } else {
-          zone_60min.append(0);
-        }
+        c_zone.append(check_zone(close, fast, slow));
+        c_zone_monthly.append(check_zone(close, query.value(7).toDouble(), query.value(8).toDouble()));
+        c_zone_weekly.append(check_zone(close, query.value(9).toDouble(), query.value(10).toDouble()));
+        c_zone_daily.append(check_zone(close, query.value(11).toDouble(), query.value(12).toDouble()));
+        c_zone_60min.append(check_zone(close, query.value(13).toDouble(), query.value(14).toDouble()));
 
         if (rowid.size() >= 50000) {
           qUpdate.prepare(sql_update);
-          qUpdate.addBindValue(zone);
-          qUpdate.addBindValue(zone_monthly);
-          qUpdate.addBindValue(zone_weekly);
-          qUpdate.addBindValue(zone_daily);
-          qUpdate.addBindValue(zone_60min);
+          qUpdate.addBindValue(c_zone);
+          qUpdate.addBindValue(c_zone_monthly);
+          qUpdate.addBindValue(c_zone_weekly);
+          qUpdate.addBindValue(c_zone_daily);
+          qUpdate.addBindValue(c_zone_60min);
+          qUpdate.addBindValue(o_zone);
+          qUpdate.addBindValue(o_zone_monthly);
+          qUpdate.addBindValue(o_zone_weekly);
+          qUpdate.addBindValue(o_zone_daily);
+          qUpdate.addBindValue(o_zone_60min);
+          qUpdate.addBindValue(h_zone);
+          qUpdate.addBindValue(h_zone_monthly);
+          qUpdate.addBindValue(h_zone_weekly);
+          qUpdate.addBindValue(h_zone_daily);
+          qUpdate.addBindValue(h_zone_60min);
+          qUpdate.addBindValue(l_zone);
+          qUpdate.addBindValue(l_zone_monthly);
+          qUpdate.addBindValue(l_zone_weekly);
+          qUpdate.addBindValue(l_zone_daily);
+          qUpdate.addBindValue(l_zone_60min);
+          qUpdate.addBindValue(c_zone);
+          qUpdate.addBindValue(c_zone_monthly);
+          qUpdate.addBindValue(c_zone_weekly);
+          qUpdate.addBindValue(c_zone_daily);
+          qUpdate.addBindValue(c_zone_60min);
           qUpdate.addBindValue(rowid);
           qUpdate.execBatch();
           rowid.clear();
-          zone.clear();
-          zone_monthly.clear();
-          zone_weekly.clear();
-          zone_daily.clear();
-          zone_60min.clear();
+          o_zone.clear();
+          o_zone_monthly.clear();
+          o_zone_weekly.clear();
+          o_zone_daily.clear();
+          o_zone_60min.clear();
+          h_zone.clear();
+          h_zone_monthly.clear();
+          h_zone_weekly.clear();
+          h_zone_daily.clear();
+          h_zone_60min.clear();
+          l_zone.clear();
+          l_zone_monthly.clear();
+          l_zone_weekly.clear();
+          l_zone_daily.clear();
+          l_zone_60min.clear();
+          c_zone.clear();
+          c_zone_monthly.clear();
+          c_zone_weekly.clear();
+          c_zone_daily.clear();
+          c_zone_60min.clear();
         }
       }
 
       if (rowid.size() > 0) {
         qUpdate.prepare(sql_update);
-        qUpdate.addBindValue(zone);
-        qUpdate.addBindValue(zone_monthly);
-        qUpdate.addBindValue(zone_weekly);
-        qUpdate.addBindValue(zone_daily);
-        qUpdate.addBindValue(zone_60min);
+        qUpdate.addBindValue(c_zone);
+        qUpdate.addBindValue(c_zone_monthly);
+        qUpdate.addBindValue(c_zone_weekly);
+        qUpdate.addBindValue(c_zone_daily);
+        qUpdate.addBindValue(c_zone_60min);
+        qUpdate.addBindValue(o_zone);
+        qUpdate.addBindValue(o_zone_monthly);
+        qUpdate.addBindValue(o_zone_weekly);
+        qUpdate.addBindValue(o_zone_daily);
+        qUpdate.addBindValue(o_zone_60min);
+        qUpdate.addBindValue(h_zone);
+        qUpdate.addBindValue(h_zone_monthly);
+        qUpdate.addBindValue(h_zone_weekly);
+        qUpdate.addBindValue(h_zone_daily);
+        qUpdate.addBindValue(h_zone_60min);
+        qUpdate.addBindValue(l_zone);
+        qUpdate.addBindValue(l_zone_monthly);
+        qUpdate.addBindValue(l_zone_weekly);
+        qUpdate.addBindValue(l_zone_daily);
+        qUpdate.addBindValue(l_zone_60min);
+        qUpdate.addBindValue(c_zone);
+        qUpdate.addBindValue(c_zone_monthly);
+        qUpdate.addBindValue(c_zone_weekly);
+        qUpdate.addBindValue(c_zone_daily);
+        qUpdate.addBindValue(c_zone_60min);
         qUpdate.addBindValue(rowid);
         qUpdate.execBatch();
         rowid.clear();
-        zone.clear();
-        zone_monthly.clear();
-        zone_weekly.clear();
-        zone_daily.clear();
-        zone_60min.clear();
+        o_zone.clear();
+        o_zone_monthly.clear();
+        o_zone_weekly.clear();
+        o_zone_daily.clear();
+        o_zone_60min.clear();
+        h_zone.clear();
+        h_zone_monthly.clear();
+        h_zone_weekly.clear();
+        h_zone_daily.clear();
+        h_zone_60min.clear();
+        l_zone.clear();
+        l_zone_monthly.clear();
+        l_zone_weekly.clear();
+        l_zone_daily.clear();
+        l_zone_60min.clear();
+        c_zone.clear();
+        c_zone_monthly.clear();
+        c_zone_weekly.clear();
+        c_zone_daily.clear();
+        c_zone_60min.clear();
       }
 
       qUpdate.exec("COMMIT;");
     }
 
-    static int check_zone(const double &close, const double &fast, const double &slow) {
-      if (close >= fast && fast >= slow) return 1;
-      if (fast >= close && close >= slow) return 2;
-      if (fast >= slow && slow >= close) return 3;
-      if (close >= slow && slow >= fast) return 4;
-      if (slow >= close && close >= fast) return 5;
-      if (slow >= fast && fast >= close) return 6;
+    static int check_zone(const double &price, const double &fast, const double &slow) {
+      if ( fast < 0 || slow < 0 ) return 0; // invalid zone
+      if ( price >= fast && fast >= slow ) return 1;
+      if ( fast >= price && price >= slow ) return 2;
+      if ( fast >= slow && slow >= price ) return 3;
+      if ( price >= slow && slow >= fast ) return 4;
+      if ( slow >= price && price >= fast ) return 5;
+      if ( slow >= fast && fast >= price ) return 6;
       return 0;
     }
 
-    static void update_rank_macd(const QSqlDatabase &database) {
+    static void update_macd_rank(const QSqlDatabase &database) {
       QSqlQuery qUpdate(database);
       QSqlQuery query_1(database);
       QSqlQuery query_2(database);
@@ -3459,9 +2732,9 @@ class BarDataAdapter {
         }
 
         if (rowid_1.size() >= 80000) {
-          qUpdate.prepare(sql_update_rank_1);
-          qUpdate.addBindValue(rank_1);
-          qUpdate.addBindValue(rowid_1);
+          qUpdate.prepare( sql_update_rank_1 );
+          qUpdate.addBindValue( rank_1 );
+          qUpdate.addBindValue( rowid_1 );
           qUpdate.execBatch();
           rank_1.clear();
           rowid_1.clear();
@@ -3471,9 +2744,9 @@ class BarDataAdapter {
       }
 
       if (rowid_1.size() > 0) {
-        qUpdate.prepare(sql_update_rank_1);
-        qUpdate.addBindValue(rank_1);
-        qUpdate.addBindValue(rowid_1);
+        qUpdate.prepare( sql_update_rank_1 );
+        qUpdate.addBindValue( rank_1 );
+        qUpdate.addBindValue( rowid_1 );
         qUpdate.execBatch();
         rank_1.clear();
         rowid_1.clear();
@@ -3484,6 +2757,7 @@ class BarDataAdapter {
       //
       // MACD > 0 and MACD < 0
       //
+      /*
       sql_update_rank_1 = "update bardata set " + SQLiteHandler::COLUMN_NAME_MACD_G0_RANK + "=? where rowid=?";
       sql_update_rank_2 = "update bardata set " + SQLiteHandler::COLUMN_NAME_MACD_L0_RANK + "=? where rowid=?";
 
@@ -3562,29 +2836,196 @@ class BarDataAdapter {
       }
 
       qUpdate.exec("COMMIT;");
+      */
     }
 
-    static void update_sline_rline_count(const QSqlDatabase &database, const double &threshold,
-        const QString &symbol, const IntervalWeight &base_interval, const int &id_threshold) {
-      int NUMBER_OF_QUERY = 2;
+    //
+    // MACD, RSI, SlowK, SlowD threshold - Non-Zero based
+    //
+    static void update_column_threshold_1(const QSqlDatabase &database, const QString &column, const XmlConfigHandler::t_threshold_1 &params) {
+      QSqlQuery query_1(database);
+      QSqlQuery query_2(database);
       QSqlQuery qUpdate(database);
-      QSqlQuery query[6] =
-        { QSqlQuery(database), QSqlQuery(database), QSqlQuery(database),
-          QSqlQuery(database), QSqlQuery(database), QSqlQuery(database)};
-      QVariantList m_rowid[6];
-      QVariantList m_count[6];
-      QString sql_update[6];
-      QString m_threshold = QString::number(threshold);
-      QString RLine, RLineF, RLineS;
-      QString SLine, SLineF, SLineS;
-      QString application_path = QCoreApplication::applicationDirPath() + "/";
-      QString dbmonthly = application_path + SQLiteHandler::getDatabaseName(symbol, WEIGHT_MONTHLY);
-      QString dbweekly = application_path + SQLiteHandler::getDatabaseName(symbol, WEIGHT_WEEKLY);
-      QString dbdaily = application_path + SQLiteHandler::getDatabaseName(symbol, WEIGHT_DAILY);
-      QString db60min = application_path + SQLiteHandler::getDatabaseName(symbol, WEIGHT_60MIN);
+      QString t_id = QString::number(params.t_id);
+      QString op1 = params.operator1;
+      QString op2 = params.operator2;
+      QString value1 = QString::number(params.value1);
+      QString value2 = QString::number(params.value2);
+      QString column_value1 = column + "_VALUE1_" + t_id;
+      QString column_value2 = column + "_VALUE2_" + t_id;
+      QString sql_update = "update bardata set " + column_value1 + "=?," + column_value2 + "=? where rowid=?";
+      QVariantList rowid_1;
+      QVariantList rowid_2;
+      QVariantList column_1;
+      QVariantList column_2;
+      double m_column;
+      int n_column1 = 0;
+      int n_column2 = 0;
+
+      qUpdate.setForwardOnly(true);
+      qUpdate.exec("PRAGMA journal_mode = OFF;");
+      qUpdate.exec("PRAGMA synchronous = OFF;");
+      qUpdate.exec("PRAGMA cache_size = 50000;");
+      qUpdate.exec("BEGIN TRANSACTION;");
+
+      query_1.setForwardOnly(true);
+      query_1.exec("select rowid," + column + " from bardata order by rowid asc");
+
+      while (query_1.next()) {
+        m_column = query_1.value(1).toDouble();
+
+        if ((op1 == ">" && m_column > params.value1) ||
+            (op1 == "<" && m_column < params.value1) ||
+            (op1 == "=" && m_column == params.value1)) {
+          ++n_column1;
+        } else {
+          n_column1 = 0;
+        }
+
+        if ((op2 == ">" && m_column > params.value2) ||
+            (op2 == "<" && m_column < params.value2) ||
+            (op2 == "=" && m_column == params.value2)) {
+          ++n_column2;
+        } else {
+          n_column2 = 0;
+        }
+
+        rowid_1.append(query_1.value(0).toInt());
+        column_1.append(n_column1);
+        column_2.append(n_column2);
+
+        if (rowid_1.size() >= 60000) {
+          qUpdate.prepare(sql_update);
+          qUpdate.addBindValue(column_1);
+          qUpdate.addBindValue(column_2);
+          qUpdate.addBindValue(rowid_1);
+          qUpdate.execBatch();
+          column_1.clear();
+          column_2.clear();
+          rowid_1.clear();
+        }
+      }
+
+      if (rowid_1.size() > 0) {
+        qUpdate.prepare(sql_update);
+        qUpdate.addBindValue(column_1);
+        qUpdate.addBindValue(column_2);
+        qUpdate.addBindValue(rowid_1);
+        qUpdate.execBatch();
+        column_1.clear();
+        column_2.clear();
+        rowid_1.clear();
+      }
+
+      qUpdate.exec("COMMIT;");
+
+      //
+      // Create Histogram Rank
+      //
+      qDebug() << "Create rank:" << column;
+      QString column_rank1 = column + "_RANK1_" + t_id;
+      QString column_rank2 = column + "_RANK2_" + t_id;
+      QString sql_select_1 = "select rowid from bardata where " + column + op1 + value1 + " order by " + column_value1 + ",rowid";
+      QString sql_select_2 = "select rowid from bardata where " + column + op2 + value2 + " order by " + column_value2 + ",rowid";
+      QString sql_update_1 = "update bardata set " + column_rank1 + "=? where rowid=?";
+      QString sql_update_2 = "update bardata set " + column_rank2 + "=? where rowid=?";
+      int i = 0;
+      bool b1, b2;
+
+      qUpdate.setForwardOnly(true);
+      qUpdate.exec("PRAGMA journal_mode = OFF;");
+      qUpdate.exec("PRAGMA synchronous = OFF;");
+      qUpdate.exec("PRAGMA cache_size = 50000;");
+      qUpdate.exec("BEGIN TRANSACTION;");
+
+      query_1.exec("select count(1) from bardata where " + column + op1 + value1);
+      double m_count1 = query_1.next()? query_1.value(0).toDouble() : 0;
+
+      query_1.exec("select count(1) from bardata where " + column + op2 + value2);
+      double m_count2 = query_1.next()? query_1.value(0).toDouble() : 0;
+
+      query_1.exec(sql_select_1);
+
+      query_2.setForwardOnly(true);
+      query_2.exec(sql_select_2);
+
+      while (true) {
+        b1 = query_1.next();
+        b2 = query_2.next();
+        if (!b1 && !b2) break;
+
+        if (b1) {
+          rowid_1.append(query_1.value(0));
+          column_1.append(QString::number(i/ m_count1,'f',4));
+        }
+
+        if (b2) {
+          rowid_2.append(query_2.value(0));
+          column_2.append(QString::number(i/ m_count2,'f',4));
+        }
+
+        if (rowid_1.size() >= 50000) {
+          qUpdate.prepare(sql_update_1);
+          qUpdate.addBindValue(column_1);
+          qUpdate.addBindValue(rowid_1);
+          qUpdate.execBatch();
+          column_1.clear();
+          rowid_1.clear();
+        }
+
+        if (rowid_2.size() >= 50000) {
+          qUpdate.prepare(sql_update_2);
+          qUpdate.addBindValue(column_2);
+          qUpdate.addBindValue(rowid_2);
+          qUpdate.execBatch();
+          column_2.clear();
+          rowid_2.clear();
+        }
+
+        ++i;
+      }
+
+      if (rowid_1.size() > 0) {
+        qUpdate.prepare(sql_update_1);
+        qUpdate.addBindValue(column_1);
+        qUpdate.addBindValue(rowid_1);
+        qUpdate.execBatch();
+        column_1.clear();
+        rowid_1.clear();
+      }
+
+      if (rowid_2.size() > 0) {
+        qUpdate.prepare(sql_update_2);
+        qUpdate.addBindValue(column_2);
+        qUpdate.addBindValue(rowid_2);
+        qUpdate.execBatch();
+        column_2.clear();
+        rowid_2.clear();
+      }
+
+      qUpdate.exec("COMMIT;");
+    }
+
+    static void update_sline_rline_count(const QSqlDatabase &database, const QString &database_path, const double &threshold,
+                                         const QString &symbol, const IntervalWeight &base_interval, const int &id_threshold) {
+      const int NUMBER_OF_QUERY = 2;
+      QSqlQuery qUpdate(database);
+      QSqlQuery query[NUMBER_OF_QUERY] = { QSqlQuery(database), QSqlQuery(database)};
+      QVariantList m_rowid[NUMBER_OF_QUERY];
+      QVariantList m_count[NUMBER_OF_QUERY];
+      QString sql_update[NUMBER_OF_QUERY];
+      QString m_threshold = QString::number(threshold,'f',6);
+      // TODO: use zero based index in next version
       QString id_thres = "_" + QString::number(id_threshold+1);
+      QString dbmonthly = database_path + "/" + SQLiteHandler::getDatabaseName(symbol, WEIGHT_MONTHLY);
+      QString dbweekly = database_path + "/" + SQLiteHandler::getDatabaseName(symbol, WEIGHT_WEEKLY);
+      QString dbdaily = database_path + "/" + SQLiteHandler::getDatabaseName(symbol, WEIGHT_DAILY);
+      QString db60min = database_path + "/" + SQLiteHandler::getDatabaseName(symbol, WEIGHT_60MIN);
+      QString db5min = database_path + "/" + SQLiteHandler::getDatabaseName(symbol, WEIGHT_5MIN);
+      QString RLine;
+      QString SLine;
       IntervalWeight w = base_interval;
-      bool b[6];
+      bool b[NUMBER_OF_QUERY];
 
       for (int i = 0; i < NUMBER_OF_QUERY; ++i) {
         query[i].setForwardOnly(true);
@@ -3592,6 +3033,7 @@ class BarDataAdapter {
         query[i].exec("ATTACH DATABASE '" + dbweekly + "' AS dbWeekly");
         query[i].exec("ATTACH DATABASE '" + dbdaily + "' AS dbDaily");
         query[i].exec("ATTACH DATABASE '" + db60min + "' AS db60min");
+        query[i].exec("ATTACH DATABASE '" + db5min + "' AS db5min");
       }
 
       while (w != WEIGHT_INVALID) {
@@ -3600,33 +3042,17 @@ class BarDataAdapter {
         //
         if (w == WEIGHT_MONTHLY) {
           RLine = SQLiteHandler::COLUMN_NAME_MONTHLY_RLINE + id_thres;
-          RLineF = SQLiteHandler::COLUMN_NAME_MONTHLY_RLINE_F + id_thres;
-          RLineS = SQLiteHandler::COLUMN_NAME_MONTHLY_RLINE_S + id_thres;
           SLine = SQLiteHandler::COLUMN_NAME_MONTHLY_SLINE + id_thres;
-          SLineF = SQLiteHandler::COLUMN_NAME_MONTHLY_SLINE_F + id_thres;
-          SLineS = SQLiteHandler::COLUMN_NAME_MONTHLY_SLINE_S + id_thres;
         } else if (w == WEIGHT_WEEKLY) {
           RLine = SQLiteHandler::COLUMN_NAME_WEEKLY_RLINE + id_thres;
-          RLineF = SQLiteHandler::COLUMN_NAME_WEEKLY_RLINE_F + id_thres;
-          RLineS = SQLiteHandler::COLUMN_NAME_WEEKLY_RLINE_S + id_thres;
           SLine = SQLiteHandler::COLUMN_NAME_WEEKLY_SLINE + id_thres;
-          SLineF = SQLiteHandler::COLUMN_NAME_WEEKLY_SLINE_F + id_thres;
-          SLineS = SQLiteHandler::COLUMN_NAME_WEEKLY_SLINE_S + id_thres;
         } else {
           RLine = SQLiteHandler::COLUMN_NAME_DAILY_RLINE + id_thres;
-          RLineF = SQLiteHandler::COLUMN_NAME_DAILY_RLINE_F + id_thres;
-          RLineS = SQLiteHandler::COLUMN_NAME_DAILY_RLINE_S + id_thres;
           SLine = SQLiteHandler::COLUMN_NAME_DAILY_SLINE + id_thres;
-          SLineF = SQLiteHandler::COLUMN_NAME_DAILY_SLINE_F + id_thres;
-          SLineS = SQLiteHandler::COLUMN_NAME_DAILY_SLINE_S + id_thres;
         }
 
         sql_update[0] = "update bardata set " + RLine + "=? where rowid=?";
         sql_update[1] = "update bardata set " + SLine + "=? where rowid=?";
-//        sql_update[2] = "update bardata set " + RLineF + "=? where rowid=?";
-//        sql_update[3] = "update bardata set " + SLineF + "=? where rowid=?";
-//        sql_update[4] = "update bardata set " + RLineS + "=? where rowid=?";
-//        sql_update[5] = "update bardata set " + SLineS + "=? where rowid=?";
 
         //
         // Handle join
@@ -3645,6 +3071,12 @@ class BarDataAdapter {
 
           sql_select_1 += "select a.rowid, count(1) from bardata a";
           sql_select_2 += "select a.rowid, count(1) from bardata a";
+
+          if (base_interval < WEIGHT_5MIN) {
+            if (base_interval < WEIGHT_1MIN) alias = "m1";
+            sql_select_1 += " left join db5min.bardata m5 ON " + alias + "._parent_prev=m5.rowid";
+            sql_select_2 += " left join db5min.bardata m5 ON " + alias + "._parent_prev=m5.rowid";
+          }
 
           if (base_interval < WEIGHT_60MIN) {
             if (base_interval < WEIGHT_5MIN) alias = "m5";
@@ -3690,90 +3122,49 @@ class BarDataAdapter {
             " group by a.rowid";
 
           query[0].exec(sql_select_1);
-          if (query[0].lastError().isValid())
-            qDebug() << query[0].lastError() << "\n" << base_interval << w << "\n" << sql_select_1 << "\n";
-
           query[1].exec(sql_select_2);
-          if (query[1].lastError().isValid())
+
+          if (query[0].lastError().isValid()) {
+            qDebug() << query[0].lastError() << "\n" << base_interval << w << "\n" << sql_select_1 << "\n";
+          }
+
+          if (query[1].lastError().isValid()) {
             qDebug() << query[1].lastError() << "\n" << base_interval << w << "\n" << sql_select_2 << "\n";
+          }
 
 //          qDebug() << "WTF " << base_interval << w;
 //          qDebug() << sql_select_1;
-
         } else {
           query[0].exec("select a.rowid, count(1) from bardata a "
-                       " join resistancedata b on a.prevdate=b.date_ and a.prevtime=b.time_"
-                       " where b.id_threshold=" + QString::number(id_threshold) + " and "
-                        "(b.resistance-" + m_threshold + ")<=a.high_ and "
-                       "((b.resistance+" + m_threshold + ")>=a.open_ or "
-                       " (b.resistance+" + m_threshold + ")>=a.close_) group by a.rowid");
-          if (query[0].lastError().isValid()) qDebug() << query[0].lastError();
+                        " join resistancedata b on a.prevdate=b.date_ and a.prevtime=b.time_"
+                        " where b.id_threshold=" + QString::number(id_threshold) + " and "
+                        " (b.resistance-" + m_threshold + ")<=a.high_ and "
+                        "((b.resistance+" + m_threshold + ")>=a.open_ or "
+                        " (b.resistance+" + m_threshold + ")>=a.close_) group by a.rowid");
 
           query[1].exec("select a.rowid, count(1) from bardata a "
-                       " join supportdata b on a.prevdate=b.date_ and a.prevtime=b.time_"
-                       " where b.id_threshold=" + QString::number(id_threshold) + " and "
-                       "(b.support+" + m_threshold + ")>=a.low_ and "
-                      "((b.support-" + m_threshold + ")<=a.open_ or " +
-                       "(b.support-" + m_threshold + ")<=a.close_) group by a.rowid");
+                        " join supportdata b on a.prevdate=b.date_ and a.prevtime=b.time_"
+                        " where b.id_threshold=" + QString::number(id_threshold) + " and "
+                        " (b.support+" + m_threshold + ")>=a.low_ and "
+                        "((b.support-" + m_threshold + ")<=a.open_ or "
+                        " (b.support-" + m_threshold + ")<=a.close_) group by a.rowid");
+
+          if (query[0].lastError().isValid()) qDebug() << query[0].lastError();
           if (query[1].lastError().isValid()) qDebug() << query[1].lastError();
 
-//          query[2].exec("select a.rowid, count(1) from bardata a"
+//          qDebug() << ("select a.rowid, count(1) from bardata a "
 //                       " join resistancedata b on a.prevdate=b.date_ and a.prevtime=b.time_"
-//                       " left join bardata c on a.rowid-1=c.rowid where "
-//                        "(b.resistance-" + m_threshold + ")<=a.high_ and "
+//                       " where b.id_threshold=" + QString::number(id_threshold) + " and "
+//                       " (b.resistance-" + m_threshold + ")<=a.high_ and "
 //                       "((b.resistance+" + m_threshold + ")>=a.open_ or "
-//                        "(b.resistance+" + m_threshold + ")>=a.close_) and "
-//                       "((b.resistance >= c.fastavg and b.resistance <= a.fastavg) or "
-//                        "(b.resistance >= a.fastavg and b.resistance <= c.fastavg))"
-//                       " group by a.rowid");
-//          if (query[2].lastError().isValid()) qDebug() << query[2].lastError();
+//                       " (b.resistance+" + m_threshold + ")>=a.close_) group by a.rowid") << "\n";
 
-//          query[3].exec("select a.rowid, count(1) from bardata a "
+//          qDebug() << ("select a.rowid, count(1) from bardata a "
 //                       " join supportdata b on a.prevdate=b.date_ and a.prevtime=b.time_"
-//                       " left join bardata c on a.rowid-1=c.rowid where "
-//                        "(b.support+" + m_threshold + ")>=a.low_ and "
-//                       "((b.support-" + m_threshold + ")<=a.open_ or " +
-//                        "(b.support-" + m_threshold + ")<=a.close_) and "
-//                       "((b.support >= c.fastavg and b.support <= a.fastavg) or "
-//                        "(b.support >= a.fastavg and b.support <= c.fastavg))"
-//                       " group by a.rowid");
-//          if (query[3].lastError().isValid()) qDebug() << query[3].lastError();
-
-
-//          query[4].exec("select a.rowid, count(1) from bardata a"
-//                       " join resistancedata b on a.prevdate=b.date_ and a.prevtime=b.time_"
-//                       " left join bardata c on a.rowid-1=c.rowid where "
-//                        "(b.resistance-" + m_threshold + ")<=a.high_ and "
-//                       "((b.resistance+" + m_threshold + ")>=a.open_ or "
-//                        "(b.resistance+" + m_threshold + ")>=a.close_) and "
-//                       "((b.resistance >= c.slowavg and b.resistance <= a.slowavg) or "
-//                        "(b.resistance >= a.slowavg and b.resistance <= c.slowavg))"
-//                       " group by a.rowid");
-//          if (query[4].lastError().isValid()) qDebug() << query[4].lastError();
-
-
-//          query[5].exec("select a.rowid, count(1) from bardata a "
-//                       " join supportdata b on a.prevdate=b.date_ and a.prevtime=b.time_"
-//                       " left join bardata c on a.rowid-1=c.rowid where "
-//                        "(b.support+" + m_threshold + ")>=a.low_ and "
-//                       "((b.support-" + m_threshold + ")<=a.open_ or " +
-//                        "(b.support-" + m_threshold + ")<=a.close_) and "
-//                       "((b.support >= c.slowavg and b.support <= a.slowavg) or "
-//                        "(b.support >= a.slowavg and b.support <= c.slowavg))"
-//                       " group by a.rowid");
-//          if (query[5].lastError().isValid()) qDebug() << query[3].lastError();
-
-
-//          qDebug() << ("select a.rowid, count(1) from bardata a"
-//                       " join resistancedata b on a.prevdate=b.date_ and a.prevtime=b.time_"
-//                       " left join bardata c on a.rowid-1=c.rowid"
-//                       " where "
-//                        "(b.resistance-" + m_threshold + ")<=a.high_ and "
-//                       "((b.resistance+" + m_threshold + ")>=a.open_ or "
-//                        "(b.resistance+" + m_threshold + ")>=a.close_) and "
-//                       "((b.resistance >= c.fastavg and b.resistance <= a.fastavg) or "
-//                        "(b.resistance >= a.fastavg and b.resistance <= c.fastavg))"
-//                       " group by a.rowid");
+//                       " where b.id_threshold=" + QString::number(id_threshold) + " and "
+//                       " (b.support+" + m_threshold + ")>=a.low_ and "
+//                       "((b.support-" + m_threshold + ")<=a.open_ or "
+//                       " (b.support-" + m_threshold + ")<=a.close_) group by a.rowid") << "\n";
         }
 
         //
@@ -3789,12 +3180,6 @@ class BarDataAdapter {
           b[0] = query[0].next();
           b[1] = query[1].next();
           if (!b[0] && !b[1]) break;
-
-//          b[2] = query[2].next();
-//          b[3] = query[3].next();
-//          b[4] = query[4].next();
-//          b[5] = query[5].next();
-//          if (!b[0] && !b[1] && !b[2] && !b[3] && !b[4] && !b[5]) break;
 
           for (int i = 0; i < NUMBER_OF_QUERY; ++i) {
             if (b[i]) {
@@ -3883,11 +3268,11 @@ class BarDataAdapter {
 \
       query_1.setForwardOnly(true);
       query_1.exec(sql_select_resistance);
-//      if (query_1.lastError().isValid()) qDebug() << query_1.lastError();
+      if (query_1.lastError().isValid()) qDebug() << query_1.lastError();
 
       query_2.setForwardOnly(true);
       query_2.exec(sql_select_support);
-//      if (query_2.lastError().isValid()) qDebug() << query_2.lastError();
+      if (query_2.lastError().isValid()) qDebug() << query_2.lastError();
 
       while (true) {
         b1 = query_1.next();
@@ -3898,6 +3283,12 @@ class BarDataAdapter {
           if (lastDate_res != query_1.value(3).toString()) {
             lastDate_res = query_1.value(3).toString();
             lastResistance = query_1.value(1).toDouble();
+            distPoint = 1000;
+            distATR = distPoint / query_1.value(2).toDouble();
+            lastResistance = sr_value;
+            res_rowid.append(query_1.value(0).toInt());
+            res_distPoint.append(QString::number(distPoint,'f',4));
+            res_distATR.append(QString::number(distATR,'f',4));
           } else {
             sr_value = query_1.value(1).toDouble();
             distPoint = lastResistance - sr_value;
@@ -3913,6 +3304,12 @@ class BarDataAdapter {
           if (lastDate_sup != query_2.value(3).toString()) {
             lastDate_sup = query_2.value(3).toString();
             lastSupport = query_2.value(1).toDouble();
+            distPoint = 1000;
+            distATR = distPoint / query_2.value(2).toDouble();
+            lastSupport = sr_value;
+            sup_rowid.append(query_2.value(0).toInt());
+            sup_distPoint.append(QString::number(distPoint,'f',4));
+            sup_distATR.append(QString::number(distATR,'f',4));
           } else {
             sr_value = query_2.value(1).toDouble();
             distPoint = sr_value - lastSupport;
@@ -3972,19 +3369,98 @@ class BarDataAdapter {
       qUpdate.exec("COMMIT;");
     }
 
-    /*static void update_rank_atr(const QSqlDatabase &database) {
+    static void update_intraday_avg(const QSqlDatabase &database, const QString &database_path, const QString &symbol, const IntervalWeight &base_interval) {
+      QSqlQuery query_day10(database);
+      QSqlQuery query_day50(database);
       QSqlQuery qUpdate(database);
-      QSqlQuery query_1(database);
-      QVariantList rowid_1;
-      QVariantList rank_1;
-      QString sql_update_1 = "update bardata set ATR_rank=? where rowid=?";
-      long i = 0;
+      QString dbdaily = database_path + "/" + SQLiteHandler::getDatabaseName(symbol, WEIGHT_DAILY);
+      QString db60min = database_path + "/" + SQLiteHandler::getDatabaseName(symbol, WEIGHT_60MIN);
+      QString db5min = database_path + "/" + SQLiteHandler::getDatabaseName(symbol, WEIGHT_5MIN);
+      QString sql_select_day10;
+      QString sql_select_day50;
+      QString sql_update_1 = "update bardata set day10=? where rowid=?";
+      QString sql_update_2 = "update bardata set day50=? where rowid=?";
+      QVariantList m_rowid_day10;
+      QVariantList m_rowid_day50;
+      QVariantList m_day10;
+      QVariantList m_day50;
+      bool b1, b2;
 
-      query_1.exec("select count(1) from bardata");
-      double count_1 = query_1.next()? query_1.value(0).toDouble() : 0;
+      query_day10.setForwardOnly(true);
+      query_day10.exec("attach database '" + dbdaily + "' as dbdaily");
 
-      query_1.setForwardOnly(true);
-      query_1.exec("select rowid from bardata order by atr asc");
+      query_day50.setForwardOnly(true);
+      query_day50.exec("attach database '" + dbdaily + "' as dbdaily");
+
+      if (base_interval == WEIGHT_60MIN) {
+        sql_select_day10 =
+          "select a.rowid, (sum(b.close_) + (case when a.time_<>b.time_ then a.close_-b.close_ else 0 end))/10 "
+          " from bardata a join dbdaily.bardata b on (b.rowid>a._parent-10 and b.rowid<=a._parent)"
+          " group by a.rowid"
+          " having count(1)=10"
+          " order by a.rowid";
+
+        sql_select_day50 =
+          "select a.rowid, (sum(b.close_) + (case when a.time_<>b.time_ then a.close_-b.close_ else 0 end))/50 "
+          " from bardata a join dbdaily.bardata b on (b.rowid>a._parent-50 and b.rowid<=a._parent)"
+          " group by a.rowid"
+          " having count(1)=50"
+          " order by a.rowid";
+      }
+      else if (base_interval == WEIGHT_5MIN) {
+        query_day10.exec("attach database '" + db60min + "' as db60min");
+        query_day50.exec("attach database '" + db60min + "' as db60min");
+
+        sql_select_day10 =
+          "select a.rowid, (sum(b.close_) + (case when a.time_<>b.time_ then a.close_-b.close_ else 0 end))/10 "
+          " from bardata a "
+          " join db60min.bardata x on a._parent=x.rowid"
+          " join dbdaily.bardata b on (b.rowid>x._parent-10 and b.rowid<=x._parent)"
+          " group by a.rowid"
+          " having count(1)=10"
+          " order by a.rowid";
+
+        sql_select_day50 =
+          "select a.rowid, (sum(b.close_) + (case when a.time_<>b.time_ then a.close_-b.close_ else 0 end))/50 "
+          " from bardata a "
+          " join db60min.bardata x on a._parent=x.rowid"
+          " join dbdaily.bardata b on (b.rowid>x._parent-50 and b.rowid<=x._parent)"
+          " group by a.rowid"
+          " having count(1)=50"
+          " order by a.rowid";
+      }
+      else {
+        query_day10.exec("attach database '" + db60min + "' as db60min");
+        query_day50.exec("attach database '" + db60min + "' as db60min");
+        query_day10.exec("attach database '" + db5min + "' as db5min");
+        query_day50.exec("attach database '" + db5min + "' as db5min");
+
+        sql_select_day10 =
+          "select a.rowid, (sum(b.close_) + (case when a.time_<>b.time_ then a.close_-b.close_ else 0 end))/10 "
+          " from bardata a "
+          " join db5min.bardata y on a._parent=y.rowid"
+          " join db60min.bardata x on y._parent=x.rowid"
+          " join dbdaily.bardata b on (b.rowid>x._parent-10 and b.rowid<=x._parent)"
+          " group by a.rowid"
+          " having count(1)=10"
+          " order by a.rowid";
+
+        sql_select_day50 =
+          "select a.rowid, (sum(b.close_) + (case when a.time_<>b.time_ then a.close_-b.close_ else 0 end))/50 "
+          " from bardata a "
+          " join db5min.bardata y on a._parent=y.rowid"
+          " join db60min.bardata x on y._parent=x.rowid"
+          " join dbdaily.bardata b on (b.rowid>x._parent-50 and b.rowid<=x._parent)"
+          " group by a.rowid"
+          " having count(1)=50"
+          " order by a.rowid";
+      }
+
+      query_day10.exec(sql_select_day10);
+      if (query_day10.lastError().isValid()) qDebug() << query_day10.lastError();
+
+      query_day50.exec(sql_select_day50);
+      if (query_day50.lastError().isValid()) qDebug() << query_day50.lastError();
 
       qUpdate.setForwardOnly(true);
       qUpdate.exec("PRAGMA journal_mode = OFF;");
@@ -3992,17 +3468,248 @@ class BarDataAdapter {
       qUpdate.exec("PRAGMA cache_size = 50000;");
       qUpdate.exec("BEGIN TRANSACTION;");
 
-      while (query_1.next()) {
-        rank_1.append(QString::number(i/count_1,'f',4));
-        rowid_1.append(query_1.value(0).toInt());
+      while (true) {
+        b1 = query_day10.next();
+        b2 = query_day50.next();
+        if (!b1 && !b2) break;
 
-        if (rowid_1.size() >= 50000) {
+        if (b1) {
+          m_rowid_day10.append(query_day10.value(0).toString());
+          m_day10.append(QString::number( query_day10.value(1).toDouble() , 'f' , 4 ));
+        }
+
+        if (b2) {
+          m_rowid_day50.append(query_day50.value(0).toString());
+          m_day50.append(QString::number( query_day50.value(1).toDouble() , 'f' , 4 ));
+        }
+
+        if (m_rowid_day10.size() >= 100000) {
+          qUpdate.prepare(sql_update_1);
+          qUpdate.addBindValue(m_day10);
+          qUpdate.addBindValue(m_rowid_day10);
+          qUpdate.execBatch();
+          m_day10.clear();
+          m_rowid_day10.clear();
+        }
+
+        if (m_rowid_day50.size() >= 100000) {
+          qUpdate.prepare(sql_update_2);
+          qUpdate.addBindValue(m_day50);
+          qUpdate.addBindValue(m_rowid_day50);
+          qUpdate.execBatch();
+          m_day50.clear();
+          m_rowid_day50.clear();
+        }
+      }
+
+      if (m_rowid_day10.size() > 0) {
+        qUpdate.prepare(sql_update_1);
+        qUpdate.addBindValue(m_day10);
+        qUpdate.addBindValue(m_rowid_day10);
+        qUpdate.execBatch();
+        m_day10.clear();
+        m_rowid_day10.clear();
+      }
+
+      if (m_rowid_day50.size() > 0) {
+        qUpdate.prepare(sql_update_2);
+        qUpdate.addBindValue(m_day50);
+        qUpdate.addBindValue(m_rowid_day50);
+        qUpdate.execBatch();
+        m_day50.clear();
+        m_rowid_day50.clear();
+      }
+
+      qUpdate.exec("COMMIT;");
+    }
+
+    /* Calculate CGF, CLF, CGS, CLS with Threshold
+     * Examples:
+     *    if (threshold = 0)        C > F
+     *    if (positive threshold)   C > (F - T)
+     *    if (negative threshold)   C < (F + T)
+     *
+     * Description:
+     *  C = Close
+     *  F = FastAvg
+     *  T = threshold
+     */
+    static void update_close_threshold(const QSqlDatabase &database, const QString &column_name, const int &id_threshold, const double &t_value) {
+      QSqlQuery qUpdate(database);
+      QSqlQuery query(database);
+      QVariantList m_count;
+      QVariantList m_rowid;
+      QString m_column_name = column_name + "_" + QString::number(id_threshold); // zero-based
+      QString sql_update = "update bardata set " + m_column_name + "=? where rowid=?";
+      double m_close, m_fastavg, m_slowavg;
+      long c_count = 0;
+      bool is_greater_sign = (column_name == SQLiteHandler::COLUMN_NAME_CGF ||
+                              column_name == SQLiteHandler::COLUMN_NAME_CGS);
+      bool is_collate_fast = (column_name == SQLiteHandler::COLUMN_NAME_CGF ||
+                              column_name == SQLiteHandler::COLUMN_NAME_CLF);
+
+      query.setForwardOnly(true);
+      query.exec("select rowid, close_, fastavg, slowavg from bardata order by rowid asc");
+
+      while (query.next()) {
+        m_close = query.value(1).toDouble();
+        m_fastavg = query.value(2).toDouble();
+        m_slowavg = query.value(3).toDouble();
+
+        if ( is_greater_sign ) {
+          if ( is_collate_fast ) {
+            c_count = ( m_close > m_fastavg - t_value ) ? c_count + 1 : 0;
+          } else {
+            c_count = ( m_close > m_slowavg - t_value ) ? c_count + 1 : 0;
+          }
+        }
+        else {
+          if ( is_collate_fast ) {
+            c_count = ( m_close < m_fastavg + t_value ) ? c_count + 1 : 0;
+          } else {
+            c_count = ( m_close < m_slowavg + t_value ) ? c_count + 1 : 0;
+          }
+        }
+
+        m_rowid.append( query.value(0).toString() );
+        m_count.append( c_count );
+
+        if (m_rowid.size() >= 50000) {
+          qUpdate.prepare( sql_update );
+          qUpdate.addBindValue( m_count );
+          qUpdate.addBindValue( m_rowid );
+          qUpdate.execBatch();
+          m_count.clear();
+          m_rowid.clear();
+        }
+      }
+
+      if (m_rowid.size() > 0) {
+        qUpdate.prepare( sql_update );
+        qUpdate.addBindValue( m_count );
+        qUpdate.addBindValue( m_rowid );
+        qUpdate.execBatch();
+        m_count.clear();
+        m_rowid.clear();
+      }
+    }
+
+    // Calculate Rank for CGF, CLF, CGS, CLS after threshold applied
+    static void update_close_threshold_rank(const QSqlDatabase &database, const int &id_threshold) {
+      QSqlQuery qUpdate(database);
+      QSqlQuery query_1(database);
+      QSqlQuery query_2(database);
+      QSqlQuery query_3(database);
+      QSqlQuery query_4(database);
+      QVariantList rank_1;
+      QVariantList rank_2;
+      QVariantList rank_3;
+      QVariantList rank_4;
+      QVariantList rowid_1;
+      QVariantList rowid_2;
+      QVariantList rowid_3;
+      QVariantList rowid_4;
+      QString tid = "_" + QString::number(id_threshold); // zero-based
+      QString CGF = SQLiteHandler::COLUMN_NAME_CGF + tid;
+      QString CLF = SQLiteHandler::COLUMN_NAME_CLF + tid;
+      QString CGS = SQLiteHandler::COLUMN_NAME_CGS + tid;
+      QString CLS = SQLiteHandler::COLUMN_NAME_CLS + tid;
+      QString sql_update_1 = "update bardata set " + SQLiteHandler::COLUMN_NAME_CGF_RANK + tid + "=? where rowid=?";
+      QString sql_update_2 = "update bardata set " + SQLiteHandler::COLUMN_NAME_CLF_RANK + tid + "=? where rowid=?";
+      QString sql_update_3 = "update bardata set " + SQLiteHandler::COLUMN_NAME_CGS_RANK + tid + "=? where rowid=?";
+      QString sql_update_4 = "update bardata set " + SQLiteHandler::COLUMN_NAME_CLS_RANK + tid + "=? where rowid=?";
+      long i = 0;
+      bool b[4] = {false, false, false, false};
+
+      query_1.setForwardOnly(true);
+      query_2.setForwardOnly(true);
+      query_3.setForwardOnly(true);
+      query_4.setForwardOnly(true);
+
+      query_1.exec("select count(1) from bardata where " + CGF + " > 0");
+      double count_1 = query_1.next()? query_1.value(0).toDouble() : 0;
+
+      query_1.exec("select count(1) from bardata where " + CLF + " > 0");
+      double count_2 = query_1.next()? query_1.value(0).toDouble() : 0;
+
+      query_1.exec("select count(1) from bardata where " + CGS + " > 0");
+      double count_3 = query_1.next()? query_1.value(0).toDouble() : 0;
+
+      query_1.exec("select count(1) from bardata where " + CLS + " > 0");
+      double count_4 = query_1.next()? query_1.value(0).toDouble() : 0;
+
+      query_1.exec("select rowid from bardata where " + CGF + "> 0 order by " + CGF + " asc,rowid asc");
+      query_2.exec("select rowid from bardata where " + CLF + "> 0 order by " + CLF + " asc,rowid asc");
+      query_3.exec("select rowid from bardata where " + CGS + "> 0 order by " + CGS + " asc,rowid asc");
+      query_4.exec("select rowid from bardata where " + CLS + "> 0 order by " + CLS + " asc,rowid asc");
+
+      qUpdate.setForwardOnly(true);
+      qUpdate.exec("PRAGMA journal_mode = OFF;");
+      qUpdate.exec("PRAGMA synchronous = OFF;");
+      qUpdate.exec("PRAGMA cache_size = 50000;");
+      qUpdate.exec("BEGIN TRANSACTION;");
+
+      while (true) {
+        b[0] = query_1.next();
+        b[1] = query_2.next();
+        b[2] = query_3.next();
+        b[3] = query_4.next();
+        if (!b[0] && !b[1] && !b[2] && !b[3]) break;
+
+        if (b[0]) {
+          rowid_1.append(query_1.value(0).toString());
+          rank_1.append(QString::number(i / count_1,'f',4));
+        }
+
+        if (b[1]) {
+          rowid_2.append(query_2.value(0).toString());
+          rank_2.append(QString::number(i / count_2,'f',4));
+        }
+
+        if (b[2]) {
+          rowid_3.append(query_3.value(0).toString());
+          rank_3.append(QString::number(i / count_3,'f',4));
+        }
+
+        if (b[3]) {
+          rowid_4.append(query_4.value(0).toString());
+          rank_4.append(QString::number(i / count_4,'f',4));
+        }
+
+        if (rowid_1.size() >= 80000) {
           qUpdate.prepare(sql_update_1);
           qUpdate.addBindValue(rank_1);
           qUpdate.addBindValue(rowid_1);
           qUpdate.execBatch();
           rank_1.clear();
           rowid_1.clear();
+        }
+
+        if (rowid_2.size() >= 80000) {
+          qUpdate.prepare(sql_update_2);
+          qUpdate.addBindValue(rank_2);
+          qUpdate.addBindValue(rowid_2);
+          qUpdate.execBatch();
+          rank_2.clear();
+          rowid_2.clear();
+        }
+
+        if (rowid_3.size() >= 80000) {
+          qUpdate.prepare(sql_update_3);
+          qUpdate.addBindValue(rank_3);
+          qUpdate.addBindValue(rowid_3);
+          qUpdate.execBatch();
+          rank_3.clear();
+          rowid_3.clear();
+        }
+
+        if (rowid_4.size() >= 80000) {
+          qUpdate.prepare(sql_update_4);
+          qUpdate.addBindValue(rank_4);
+          qUpdate.addBindValue(rowid_4);
+          qUpdate.execBatch();
+          rank_4.clear();
+          rowid_4.clear();
         }
 
         ++i;
@@ -4017,447 +3724,61 @@ class BarDataAdapter {
         rowid_1.clear();
       }
 
-      qUpdate.exec("COMMIT;");
-    }*/
-
-    /*static void update_rsi_rank(const QSqlDatabase &database) {
-      QSqlQuery qUpdate(database);
-      QSqlQuery query(database);
-      QVariantList v_rank;
-      QVariantList v_rowid;
-      QString sql_update_rank =
-        "update bardata set " + SQLiteHandler::COLUMN_NAME_RSI_G70_RANK + "=?" +
-        " where rowid=?";
-
-      query.setForwardOnly(true);
-      query.exec("select count(1) from bardata where rsi>70");
-      double count = query.next()? query.value(0).toDouble() : 0;
-      int i = 0;
-
-      query.exec("select rowid, RSI_G70 from bardata where rsi>70 order by RSI_G70 asc, rowid asc");
-      qUpdate.setForwardOnly(true);
-      qUpdate.exec("PRAGMA journal_mode = OFF;");
-      qUpdate.exec("PRAGMA synchronous = OFF;");
-      qUpdate.exec("PRAGMA cache_size = 50000;");
-      qUpdate.exec("BEGIN TRANSACTION;");
-
-      while (query.next()) {
-        v_rowid.append(query.value(0).toString());
-        v_rank.append(QString::number(i / count,'f',4));
-        if (v_rowid.count() >= 80000) {
-          qUpdate.prepare(sql_update_rank);
-          qUpdate.addBindValue(v_rank);
-          qUpdate.addBindValue(v_rowid);
-          qUpdate.execBatch();
-          v_rank.clear();
-          v_rowid.clear();
-        }
-        ++i;
-      }
-
-      if (v_rowid.count() > 0) {
-        qUpdate.prepare(sql_update_rank);
-        qUpdate.addBindValue(v_rank);
-        qUpdate.addBindValue(v_rowid);
+      if (rowid_2.size() > 0) {
+        qUpdate.prepare(sql_update_2);
+        qUpdate.addBindValue(rank_2);
+        qUpdate.addBindValue(rowid_2);
         qUpdate.execBatch();
-        v_rank.clear();
-        v_rowid.clear();
+        rank_2.clear();
+        rowid_2.clear();
       }
 
-      qUpdate.exec("COMMIT;");
-
-      i = 0;
-      query.exec("select count(1) from bardata where rsi<30");
-      count = query.next()? query.value(0).toDouble() : 0;
-      sql_update_rank =
-        "update bardata set " + SQLiteHandler::COLUMN_NAME_RSI_L30_RANK + "=?" +
-        " where rowid=?";
-
-      query.exec("select rowid, RSI_L30 from bardata where rsi<30 order by RSI_L30 asc, rowid asc");
-      qUpdate.setForwardOnly(true);
-      qUpdate.exec("PRAGMA journal_mode = OFF;");
-      qUpdate.exec("PRAGMA synchronous = OFF;");
-      qUpdate.exec("PRAGMA cache_size = 50000;");
-      qUpdate.exec("BEGIN TRANSACTION;");
-
-      while (query.next()) {
-        v_rowid.append(query.value(0).toString());
-        v_rank.append(QString::number(i / count,'f',4));
-        if (v_rowid.count() >= 80000) {
-          qUpdate.prepare(sql_update_rank);
-          qUpdate.addBindValue(v_rank);
-          qUpdate.addBindValue(v_rowid);
-          qUpdate.execBatch();
-          v_rank.clear();
-          v_rowid.clear();
-        }
-        ++i;
-      }
-
-      if (v_rowid.count() > 0) {
-        qUpdate.prepare(sql_update_rank);
-        qUpdate.addBindValue(v_rank);
-        qUpdate.addBindValue(v_rowid);
+      if (rowid_3.size() > 0) {
+        qUpdate.prepare(sql_update_3);
+        qUpdate.addBindValue(rank_3);
+        qUpdate.addBindValue(rowid_3);
         qUpdate.execBatch();
-        v_rank.clear();
-        v_rowid.clear();
+        rank_3.clear();
+        rowid_3.clear();
       }
 
-      qUpdate.exec("COMMIT;");
-    }*/
-
-    /*static void update_slowk_rank(const QSqlDatabase &database) {
-      QSqlQuery qUpdate(database);
-      QSqlQuery query(database);
-      QVariantList v_rank;
-      QVariantList v_rowid;
-      QString sql_update_rank =
-        "update bardata set " + SQLiteHandler::COLUMN_NAME_SLOWK_G80_RANK + "=?" +
-        " where rowid=?";
-
-      query.setForwardOnly(true);
-      query.exec("select count(1) from bardata");
-      const double count = query.next()? query.value(0).toDouble() : 0;
-      int i = 0;
-
-      query.exec("select rowid, SLOWK_G80 from bardata order by SLOWK_G80 asc, rowid asc");
-      qUpdate.setForwardOnly(true);
-      qUpdate.exec("PRAGMA journal_mode = OFF;");
-      qUpdate.exec("PRAGMA synchronous = OFF;");
-      qUpdate.exec("PRAGMA cache_size = 50000;");
-      qUpdate.exec("BEGIN TRANSACTION;");
-
-      while (query.next()) {
-        v_rowid.append(query.value(0).toString());
-        v_rank.append(QString::number(i / count,'f',4));
-        if (v_rowid.count() >= 80000) {
-          qUpdate.prepare(sql_update_rank);
-          qUpdate.addBindValue(v_rank);
-          qUpdate.addBindValue(v_rowid);
-          qUpdate.execBatch();
-          v_rank.clear();
-          v_rowid.clear();
-        }
-        ++i;
-      }
-
-      if (v_rowid.count() > 0) {
-        qUpdate.prepare(sql_update_rank);
-        qUpdate.addBindValue(v_rank);
-        qUpdate.addBindValue(v_rowid);
+      if (rowid_4.size() > 0) {
+        qUpdate.prepare(sql_update_4);
+        qUpdate.addBindValue(rank_4);
+        qUpdate.addBindValue(rowid_4);
         qUpdate.execBatch();
-        v_rank.clear();
-        v_rowid.clear();
+        rank_4.clear();
+        rowid_4.clear();
       }
 
       qUpdate.exec("COMMIT;");
+    }
 
-      i = 0;
-      sql_update_rank =
-        "update bardata set " + SQLiteHandler::COLUMN_NAME_SLOWK_L20_RANK + "=?" +
-        " where rowid=?";
 
-      query.exec("select rowid, SLOWK_L20 from bardata order by SLOWK_L20 asc, rowid asc");
-      qUpdate.setForwardOnly(true);
-      qUpdate.exec("PRAGMA journal_mode = OFF;");
-      qUpdate.exec("PRAGMA synchronous = OFF;");
-      qUpdate.exec("PRAGMA cache_size = 50000;");
-      qUpdate.exec("BEGIN TRANSACTION;");
+    // to remove trailing zero after decimal point
+    // examples: 0.2500 into 0.25, 5.0 into 5
+    static QString remove_trailing_zero(const QString &value) {
+      if (value.toDouble() == 0) return "0";
 
-      while (query.next()) {
-        v_rowid.append(query.value(0).toString());
-        v_rank.append(QString::number(i / count,'f',4));
-        if (v_rowid.count() >= 80000) {
-          qUpdate.prepare(sql_update_rank);
-          qUpdate.addBindValue(v_rank);
-          qUpdate.addBindValue(v_rowid);
-          qUpdate.execBatch();
-          v_rank.clear();
-          v_rowid.clear();
-        }
-        ++i;
+      QString temp = value;
+      const int idx0 = value.indexOf("."); // decimal point position
+      int idx1 = value.length() - 1; // last digit position
+
+      while ( idx1 > idx0 ) {
+        if ( temp[idx1] != QChar('0') ) break;
+        --idx1;
       }
 
-      if (v_rowid.count() > 0) {
-        qUpdate.prepare(sql_update_rank);
-        qUpdate.addBindValue(v_rank);
-        qUpdate.addBindValue(v_rowid);
-        qUpdate.execBatch();
-        v_rank.clear();
-        v_rowid.clear();
-      }
-
-      qUpdate.exec("COMMIT;");
-    }*/
-
-    /*static void update_slowd_rank(const QSqlDatabase &database) {
-      QSqlQuery qUpdate(database);
-      QSqlQuery query(database);
-      QVariantList v_rank;
-      QVariantList v_rowid;
-      QString sql_update_rank =
-        "update bardata set " + SQLiteHandler::COLUMN_NAME_SLOWD_G80_RANK + "=?" +
-        " where rowid=?";
-
-      query.setForwardOnly(true);
-      query.exec("select count(1) from bardata");
-      const double count = query.next()? query.value(0).toDouble() : 0;
-      int i = 0;
-
-      query.exec("select rowid, SLOWD_G80 from bardata order by SLOWD_G80 asc, rowid asc");
-      qUpdate.setForwardOnly(true);
-      qUpdate.exec("PRAGMA journal_mode = OFF;");
-      qUpdate.exec("PRAGMA synchronous = OFF;");
-      qUpdate.exec("PRAGMA cache_size = 50000;");
-      qUpdate.exec("BEGIN TRANSACTION;");
-
-      while (query.next()) {
-        v_rowid.append(query.value(0).toString());
-        v_rank.append(QString::number(i / count,'f',4));
-        if (v_rowid.count() >= 80000) {
-          qUpdate.prepare(sql_update_rank);
-          qUpdate.addBindValue(v_rank);
-          qUpdate.addBindValue(v_rowid);
-          qUpdate.execBatch();
-          v_rank.clear();
-          v_rowid.clear();
-        }
-        ++i;
-      }
-
-      if (v_rowid.count() > 0) {
-        qUpdate.prepare(sql_update_rank);
-        qUpdate.addBindValue(v_rank);
-        qUpdate.addBindValue(v_rowid);
-        qUpdate.execBatch();
-        v_rank.clear();
-        v_rowid.clear();
-      }
-
-      qUpdate.exec("COMMIT;");
-
-      i = 0;
-      sql_update_rank =
-        "update bardata set " + SQLiteHandler::COLUMN_NAME_SLOWD_L20_RANK + "=?" +
-        " where rowid=?";
-
-      query.exec("select rowid, SLOWD_L20 from bardata order by SLOWD_L20 asc, rowid asc");
-      qUpdate.setForwardOnly(true);
-      qUpdate.exec("PRAGMA journal_mode = OFF;");
-      qUpdate.exec("PRAGMA synchronous = OFF;");
-      qUpdate.exec("PRAGMA cache_size = 50000;");
-      qUpdate.exec("BEGIN TRANSACTION;");
-
-      while (query.next()) {
-        v_rowid.append(query.value(0).toString());
-        v_rank.append(QString::number(i / count,'f',4));
-        if (v_rowid.count() >= 80000) {
-          qUpdate.prepare(sql_update_rank);
-          qUpdate.addBindValue(v_rank);
-          qUpdate.addBindValue(v_rowid);
-          qUpdate.execBatch();
-          v_rank.clear();
-          v_rowid.clear();
-        }
-        ++i;
-      }
-
-      if (v_rowid.count() > 0) {
-        qUpdate.prepare(sql_update_rank);
-        qUpdate.addBindValue(v_rank);
-        qUpdate.addBindValue(v_rowid);
-        qUpdate.execBatch();
-        v_rank.clear();
-        v_rowid.clear();
-      }
-
-      qUpdate.exec("COMMIT;");
-    }*/
-
-    // Experimental
-    /*static void initialize_distfs_bin(const QSqlDatabase &database) {
-      QSqlQuery query(database);
-      QVariantList bin_id;
-      QVariantList minv;
-      QVariantList maxv;
-      QString sql_update =
-        "update " + SQLiteHandler::TABLE_NAME_HISTOGRAM_BIN +
-        " set min_DistFS=?, max_DistFS=?, size_DistFS=0 where bin_id=?";
-
-      query.exec("select max(N_distfs), min(N_distfs) from bardata"); query.next();
-      double max_value = query.value(0).toDouble();
-      double min_value = query.value(1).toDouble();
-      double dist = (max_value- min_value) / MAX_HISTOGRAM_BIN;
-      double a = 0.00000001;
-
-      bin_id.append(1);
-      minv.append(QString::number(min_value,'f',8));
-      maxv.append(QString::number(min_value + dist,'f',8));
-      min_value += dist;
-
-      for (int i = 1; i < MAX_HISTOGRAM_BIN; ++i) {
-        bin_id.append(i+1);
-        minv.append(QString::number(min_value + a,'f',8));
-        maxv.append(QString::number(min_value + dist,'f',8));
-        min_value += dist;
-      }
-
-      query.exec("PRAGMA journal_mode = OFF;");
-      query.exec("PRAGMA synchronous = OFF;");
-      query.exec("BEGIN TRANSACTION;");
-      query.prepare(sql_update);
-      query.addBindValue(minv);
-      query.addBindValue(maxv);
-      query.addBindValue(bin_id);
-      query.execBatch();
-      query.exec("COMMIT;");
-    }*/
-
-    // Experimental
-    /*static void update_distfs_bin_id(const QSqlDatabase &database) {
-      QSqlQuery query(database);
-      QSqlQuery qUpdate(database);
-      QVariantList rowid;
-      QVariantList bin_id;
-      QVariantList bin_size;
-      QVariantList bin_rank;
-      QString sql_update = "update bardata set distfs_bin_id=? where rowid=?";
-
-      query.setForwardOnly(true);
-      query.exec("select count(1) from bardata"); query.next();
-      int total_rows = total_rows = query.value(0).toInt();
-
-      query.exec("select max(N_distfs), min(N_distfs) from bardata"); query.next();
-      double max_value =  query.value(0).toDouble();
-      double min_value = query.value(1).toDouble();
-      double dist = (max_value-min_value) / MAX_HISTOGRAM_BIN;
-      double a = 0.00000001;
-      double value;
-      int bin;
-
-      //
-      // Update Bin ID for new data (Cost: N)
-      //
-//      qDebug() << QString::number(min_value,'f',8) << QString::number(max_value,'f',8) << "dist" << QString::number(dist,'f',8);
-      query.exec("select rowid, N_DistFS from bardata where DistFS_bin_id=0");
-      qUpdate.exec("PRAGMA journal_mode = OFF;");
-      qUpdate.exec("PRAGMA synchronous = OFF;");
-      qUpdate.exec("BEGIN TRANSACTION;");
-
-      while (query.next()) {
-//        int rid = query.value(0).toInt();
-        value = query.value(1).toDouble();
-
-        if (value == min_value) {
-          bin = 1;
+      if ( idx1 < value.length() - 1 && idx1 >= idx0 ) {
+        if ( idx1 > idx0 ) {
+          temp.remove(idx1 + 1,  value.length() - idx1 - 1);
         } else {
-          bin = static_cast<int>(ceil((value - min_value - a) / dist));
-          double nextLB = ((double)bin * dist) + min_value + a;
-
-//          if ((rid == 635 && bin == 61) || (rid == 62614 && bin == 1)) {
-//            qDebug() << bin << "value:" << value << "Next LB:" <<  nextLB <<
-//                        (QString::number(nextLB,'f',8) <= QString::number(value,'f',8)) <<
-//                         QString::number(value,'f',8) <<
-//                         QString::number(nextLB,'f',8) ;
-//            qDebug() << "epsilon" << QString::number(nextLB-value,'f',20);
-//          }
-
-          if (QString::number(nextLB,'f',8) == QString::number(value,'f',8)) {
-            qDebug() << "WTF" << bin << nextLB << value << "|" << dist << min_value ;
-            if (bin+1 <= MAX_HISTOGRAM_BIN) ++bin;
-          }
-        }
-
-        rowid.append(query.value(0).toString());
-        bin_id.append(bin);
-
-        if (rowid.size() >= 50000) {
-          qUpdate.prepare(sql_update);
-          qUpdate.addBindValue(bin_id);
-          qUpdate.addBindValue(rowid);
-          qUpdate.execBatch();
-          rowid.clear();
-          bin_id.clear();
+          temp.remove(idx1,  value.length() - idx1);
         }
       }
 
-      if (rowid.size() > 0) {
-        qUpdate.prepare(sql_update);
-        qUpdate.addBindValue(bin_id);
-        qUpdate.addBindValue(rowid);
-        qUpdate.execBatch();
-        rowid.clear();
-        bin_id.clear();
-      }
-
-      qUpdate.exec("COMMIT;");
-
-      //
-      // Update Bin Size (Cost: 2000)
-      //
-      QString sql_select =
-        "select bin_id, count(1)"
-        " from bardata a join histogrambin b on a.distfs_bin_id<=b.bin_id"
-        " group by bin_id";
-
-      query.exec(sql_select);
-
-      while (query.next()) {
-        bin_id.append(query.value(0).toInt());
-        bin_size.append(query.value(1).toInt());
-      }
-
-      qUpdate.exec("PRAGMA journal_mode = OFF;");
-      qUpdate.exec("PRAGMA synchronous = OFF;");
-      qUpdate.exec("BEGIN TRANSACTION;");
-      qUpdate.prepare("update histogrambin set size_distfs=? where bin_id=?");
-      qUpdate.addBindValue(bin_size);
-      qUpdate.addBindValue(bin_id);
-      qUpdate.execBatch();
-      qUpdate.exec("COMMIT;");
-
-      sql_select =
-        "select a.rowid,size_distfs/" + QString::number(total_rows)+".0"
-        " from bardata a join histogrambin b on a.distfs_bin_id=b.bin_id"
-        " where a.distfs_rank=0 ";
-
-//      sql_select =
-//        "select a.rowid,(size_distfs-count(1))/" + QString::number(total_rows)+".0"
-//        " from bardata a join histogrambin b on a.distfs_bin_id=b.bin_id"
-//        " left join bardata c on a.distfs_bin_id=c.distfs_bin_id and c.n_distfs>=a.n_distfs"
-//        " where a.distfs_rank=0 group by a.rowid";
-
-      query.exec(sql_select);
-      qUpdate.exec("PRAGMA journal_mode = OFF;");
-      qUpdate.exec("PRAGMA synchronous = OFF;");
-      qUpdate.exec("BEGIN TRANSACTION;");
-
-      while (query.next()) {
-        rowid.append(query.value(0).toInt());
-        bin_rank.append(QString::number(query.value(1).toDouble(),'f',4));
-
-        if (rowid.size() >= 50000) {
-          qUpdate.prepare("update bardata set distfs_rank=? where rowid=?");
-          qUpdate.addBindValue(bin_rank);
-          qUpdate.addBindValue(rowid);
-          qUpdate.execBatch();
-          rowid.clear();
-          bin_rank.clear();
-        }
-      }
-
-      if (rowid.size() > 0) {
-        qUpdate.prepare("update bardata set distfs_rank=? where rowid=?");
-        qUpdate.addBindValue(bin_rank);
-        qUpdate.addBindValue(rowid);
-        qUpdate.execBatch();
-        rowid.clear();
-        bin_rank.clear();
-      }
-
-      qUpdate.exec("COMMIT;");
-    }*/
-
+      return temp;
+    }
 
   private:
     int _rid;
@@ -4483,7 +3804,8 @@ class BarDataAdapter {
     QVariantList fgs;
     QVariantList fls;
     QVariantList openbar;
-    QVariantList dispfs;
+    QVariantList dist_fscross;
+    QVariantList dist_fscross_atr;
     QVariantList atr;
     QVariantList distfc;
     QVariantList distsc;
@@ -4564,15 +3886,16 @@ class BarDataAdapter {
       projection.append(SQLiteHandler::COLUMN_NAME_DISTFS);
       projection.append(SQLiteHandler::COLUMN_NAME_ATR);
       projection.append(SQLiteHandler::COLUMN_NAME_PREV_BARCOLOR);
-      projection.append(SQLiteHandler::COLUMN_NAME_RSI_G70);
-      projection.append(SQLiteHandler::COLUMN_NAME_RSI_L30);
-      projection.append(SQLiteHandler::COLUMN_NAME_MACD_G0);
-      projection.append(SQLiteHandler::COLUMN_NAME_MACD_L0);
-      projection.append(SQLiteHandler::COLUMN_NAME_SLOWK_G80);
-      projection.append(SQLiteHandler::COLUMN_NAME_SLOWK_L20);
-      projection.append(SQLiteHandler::COLUMN_NAME_SLOWD_G80);
-      projection.append(SQLiteHandler::COLUMN_NAME_SLOWD_L20);
+//      projection.append(SQLiteHandler::COLUMN_NAME_RSI_G70);
+//      projection.append(SQLiteHandler::COLUMN_NAME_RSI_L30);
+//      projection.append(SQLiteHandler::COLUMN_NAME_MACD_G0);
+//      projection.append(SQLiteHandler::COLUMN_NAME_MACD_L0);
+//      projection.append(SQLiteHandler::COLUMN_NAME_SLOWK_G80);
+//      projection.append(SQLiteHandler::COLUMN_NAME_SLOWK_L20);
+//      projection.append(SQLiteHandler::COLUMN_NAME_SLOWD_G80);
+//      projection.append(SQLiteHandler::COLUMN_NAME_SLOWD_L20);
       projection.append(SQLiteHandler::COLUMN_NAME_DISTCC_FSCROSS);
+      projection.append(SQLiteHandler::COLUMN_NAME_DISTCC_FSCROSS_ATR);
       projection.append(SQLiteHandler::COLUMN_NAME_CANDLE_UPTAIL);
       projection.append(SQLiteHandler::COLUMN_NAME_CANDLE_DOWNTAIL);
       projection.append(SQLiteHandler::COLUMN_NAME_CANDLE_BODY);
@@ -4580,8 +3903,6 @@ class BarDataAdapter {
       projection.append(SQLiteHandler::COLUMN_NAME_N_DISTCF);
       projection.append(SQLiteHandler::COLUMN_NAME_N_DISTCS);
       projection.append(SQLiteHandler::COLUMN_NAME_N_DISTFS);
-//      projection.append(SQLiteHandler::COLUMN_NAME_DATETIME_UB);
-//      projection.append(SQLiteHandler::COLUMN_NAME_DATETIME_LB);
       projection.append(SQLiteHandler::COLUMN_NAME_IDPARENT);
       projection.append(SQLiteHandler::COLUMN_NAME_CGF);
       projection.append(SQLiteHandler::COLUMN_NAME_CLF);
@@ -4601,6 +3922,8 @@ class BarDataAdapter {
       projection.append(SQLiteHandler::COLUMN_NAME_N_DISTLS);
       projection.append(SQLiteHandler::COLUMN_NAME_FCROSS);
       projection.append(SQLiteHandler::COLUMN_NAME_SCROSS);
+//      projection.append(SQLiteHandler::COLUMN_NAME_DATETIME_UB);
+//      projection.append(SQLiteHandler::COLUMN_NAME_DATETIME_LB);
 
       QString s = ",?";
       SQL_INSERT_BARDATA =
@@ -4609,7 +3932,6 @@ class BarDataAdapter {
     }
 
     void insertBatchSqlite_v2(QSqlQuery *query) {
-//      query->prepare(SQLiteHandler::SQL_INSERT_BARDATA_V2);
       query->prepare(SQL_INSERT_BARDATA);
       query->addBindValue(date);
       query->addBindValue(time);
@@ -4640,15 +3962,16 @@ class BarDataAdapter {
       query->addBindValue(distfs);
       query->addBindValue(atr);
       query->addBindValue(prevbarcolor);
-      query->addBindValue(rsi_g70);
-      query->addBindValue(rsi_l30);
-      query->addBindValue(macd_g0);
-      query->addBindValue(macd_l0);
-      query->addBindValue(slowk_g80);
-      query->addBindValue(slowk_l20);
-      query->addBindValue(slowd_g80);
-      query->addBindValue(slowd_l20);
-      query->addBindValue(dispfs);
+//      query->addBindValue(rsi_g70);
+//      query->addBindValue(rsi_l30);
+//      query->addBindValue(macd_g0);
+//      query->addBindValue(macd_l0);
+//      query->addBindValue(slowk_g80);
+//      query->addBindValue(slowk_l20);
+//      query->addBindValue(slowd_g80);
+//      query->addBindValue(slowd_l20);
+      query->addBindValue(dist_fscross);
+      query->addBindValue(dist_fscross_atr);
       query->addBindValue(candle_uptail);
       query->addBindValue(candle_downtail);
       query->addBindValue(candle_body);
@@ -4656,8 +3979,6 @@ class BarDataAdapter {
       query->addBindValue(n_distcf);
       query->addBindValue(n_distcs);
       query->addBindValue(n_distfs);
-//      query->addBindValue(datetime_ub);
-//      query->addBindValue(datetime_lb);
       query->addBindValue(_parent);
       query->addBindValue(cgf);
       query->addBindValue(clf);
@@ -4677,6 +3998,8 @@ class BarDataAdapter {
       query->addBindValue(n_distls);
       query->addBindValue(fcross);
       query->addBindValue(scross);
+//      query->addBindValue(datetime_ub);
+//      query->addBindValue(datetime_lb);
       query->execBatch();
     }
 
@@ -4701,7 +4024,8 @@ class BarDataAdapter {
       fgs.clear();
       fls.clear();
       openbar.clear();
-      dispfs.clear();
+      dist_fscross.clear();
+      dist_fscross_atr.clear();
       atr.clear();
       distfc.clear();
       distsc.clear();
@@ -4761,14 +4085,8 @@ class BarDataAdapter {
                  SQLiteHandler::COLUMN_NAME_FASTAVG + "," +
                  SQLiteHandler::COLUMN_NAME_SLOWAVG + "," +
                  SQLiteHandler::COLUMN_NAME_PREV_BARCOLOR + "," +
-                 SQLiteHandler::COLUMN_NAME_RSI_G70 + "," +
-                 SQLiteHandler::COLUMN_NAME_RSI_L30 + "," +
-                 SQLiteHandler::COLUMN_NAME_MACD_G0 + "," +
-                 SQLiteHandler::COLUMN_NAME_MACD_L0 + "," +
-                 SQLiteHandler::COLUMN_NAME_SLOWK_G80 + "," +
-                 SQLiteHandler::COLUMN_NAME_SLOWK_L20 + "," +
-                 SQLiteHandler::COLUMN_NAME_SLOWD_G80 + "," +
-                 SQLiteHandler::COLUMN_NAME_SLOWD_L20 + "," +
+//                 SQLiteHandler::COLUMN_NAME_MACD_G0 + "," +
+//                 SQLiteHandler::COLUMN_NAME_MACD_L0 + "," +
                  SQLiteHandler::COLUMN_NAME_CGF + "," +
                  SQLiteHandler::COLUMN_NAME_CLF + "," +
                  SQLiteHandler::COLUMN_NAME_CGS + "," +
@@ -4782,18 +4100,12 @@ class BarDataAdapter {
         r.fastavg = query.value(3).toDouble();
         r.slowavg = query.value(4).toDouble();
         r.prevbarcolor = query.value(5).toString();
-        r.rsi_g70 = query.value(6).toInt();
-        r.rsi_l30 = query.value(7).toInt();
-        r.macd_g0 = query.value(8).toInt();
-        r.macd_l0 = query.value(9).toInt();
-        r.slowk_g80 = query.value(10).toInt();
-        r.slowk_l20 = query.value(11).toInt();
-        r.slowd_g80 = query.value(12).toInt();
-        r.slowd_l20 = query.value(13).toInt();
-        r.cgf = query.value(14).toInt();
-        r.clf = query.value(15).toInt();
-        r.cgs = query.value(16).toInt();
-        r.cls = query.value(17).toInt();
+//        r.macd_g0 = query.value(6).toInt();
+//        r.macd_l0 = query.value(7).toInt();
+        r.cgf = query.value(6).toInt();
+        r.clf = query.value(7).toInt();
+        r.cgs = query.value(8).toInt();
+        r.cls = query.value(9).toInt();
       } else {
         r.rowid = 0;
         r.open = 0;

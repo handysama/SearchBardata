@@ -42,6 +42,8 @@ const QString SQLiteHandler::COLUMN_NAME_DISTFS_RANK = "DistFS_Rank";
 const QString SQLiteHandler::COLUMN_NAME_N_DISTFS = "N_DistFS";
 const QString SQLiteHandler::COLUMN_NAME_FASTAVG = "FastAvg";
 const QString SQLiteHandler::COLUMN_NAME_SLOWAVG = "SlowAvg";
+const QString SQLiteHandler::COLUMN_NAME_DAY10 = "Day10";
+const QString SQLiteHandler::COLUMN_NAME_DAY50 = "Day50";
 const QString SQLiteHandler::COLUMN_NAME_FASTAVG_SLOPE = "FastAvgSlope";
 const QString SQLiteHandler::COLUMN_NAME_SLOWAVG_SLOPE = "SlowAvgSlope";
 const QString SQLiteHandler::COLUMN_NAME_FCROSS = "FCross";
@@ -51,6 +53,7 @@ const QString SQLiteHandler::COLUMN_NAME_FLS = "FLS";
 const QString SQLiteHandler::COLUMN_NAME_FGS_RANK = "FGS_Rank";
 const QString SQLiteHandler::COLUMN_NAME_FLS_RANK = "FLS_Rank";
 const QString SQLiteHandler::COLUMN_NAME_DISTCC_FSCROSS = "DistCC_FSCross";
+const QString SQLiteHandler::COLUMN_NAME_DISTCC_FSCROSS_ATR = "DistCC_FSCross_ATR";
 const QString SQLiteHandler::COLUMN_NAME_DISTCC_FSCROSS_RANK = "DistCC_FSCross_Rank";
 const QString SQLiteHandler::COLUMN_NAME_CANDLE_UPTAIL = "Candle_Uptail";
 const QString SQLiteHandler::COLUMN_NAME_CANDLE_DOWNTAIL = "Candle_Downtail";
@@ -67,27 +70,38 @@ const QString SQLiteHandler::COLUMN_NAME_CANDLE_TOTALLENGTH_RANK = "Candle_Total
 const QString SQLiteHandler::COLUMN_NAME_DATERANGE = "DateRange";
 const QString SQLiteHandler::COLUMN_NAME_ATR = "ATR";
 const QString SQLiteHandler::COLUMN_NAME_ATR_RANK = "ATR_Rank";
+const QString SQLiteHandler::COLUMN_NAME_PREV_DAILY_ATR = "PrevDailyATR";
 const QString SQLiteHandler::COLUMN_NAME_OPENBAR = "Openbar";
 const QString SQLiteHandler::COLUMN_NAME_PREV_DATE = "PrevDate";
 const QString SQLiteHandler::COLUMN_NAME_PREV_TIME = "PrevTime";
 const QString SQLiteHandler::COLUMN_NAME_PREV_BARCOLOR = "PrevBarColor";
-const QString SQLiteHandler::COLUMN_NAME_MACD_G0 = "MACD_G0";
-const QString SQLiteHandler::COLUMN_NAME_MACD_L0 = "MACD_L0";
 const QString SQLiteHandler::COLUMN_NAME_MACD_RANK = "MACD_RANK";
-const QString SQLiteHandler::COLUMN_NAME_MACD_G0_RANK = "MACD_G0_RANK";
-const QString SQLiteHandler::COLUMN_NAME_MACD_L0_RANK = "MACD_L0_RANK";
-const QString SQLiteHandler::COLUMN_NAME_RSI_G70 = "RSI_G70";
-const QString SQLiteHandler::COLUMN_NAME_RSI_L30 = "RSI_L30";
-//const QString SQLiteHandler::COLUMN_NAME_RSI_G70_RANK = "RSI_G70_RANK";
-//const QString SQLiteHandler::COLUMN_NAME_RSI_L30_RANK = "RSI_L30_RANK";
-const QString SQLiteHandler::COLUMN_NAME_SLOWK_G80 = "SLOWK_G80";
-const QString SQLiteHandler::COLUMN_NAME_SLOWK_L20 = "SLOWK_L20";
-//const QString SQLiteHandler::COLUMN_NAME_SLOWK_G80_RANK = "SLOWK_G80_RANK";
-//const QString SQLiteHandler::COLUMN_NAME_SLOWK_L20_RANK = "SLOWK_L20_RANK";
-const QString SQLiteHandler::COLUMN_NAME_SLOWD_G80 = "SLOWD_G80";
-const QString SQLiteHandler::COLUMN_NAME_SLOWD_L20 = "SLOWD_L20";
-//const QString SQLiteHandler::COLUMN_NAME_SLOWD_G80_RANK = "SLOWD_G80_RANK";
-//const QString SQLiteHandler::COLUMN_NAME_SLOWD_L20_RANK = "SLOWD_L20_RANK";
+//const QString SQLiteHandler::COLUMN_NAME_MACD_G0 = "MACD_G0";
+//const QString SQLiteHandler::COLUMN_NAME_MACD_L0 = "MACD_L0";
+//const QString SQLiteHandler::COLUMN_NAME_MACD_G0_RANK = "MACD_G0_RANK";
+//const QString SQLiteHandler::COLUMN_NAME_MACD_L0_RANK = "MACD_L0_RANK";
+//const QString SQLiteHandler::COLUMN_NAME_RSI_G70 = "RSI_G70";
+//const QString SQLiteHandler::COLUMN_NAME_RSI_L30 = "RSI_L30";
+//const QString SQLiteHandler::COLUMN_NAME_SLOWK_G80 = "SLOWK_G80";
+//const QString SQLiteHandler::COLUMN_NAME_SLOWK_L20 = "SLOWK_L20";
+//const QString SQLiteHandler::COLUMN_NAME_SLOWD_G80 = "SLOWD_G80";
+//const QString SQLiteHandler::COLUMN_NAME_SLOWD_L20 = "SLOWD_L20";
+const QString SQLiteHandler::COLUMN_NAME_MACD_VALUE1 = "MACD_VALUE1";
+const QString SQLiteHandler::COLUMN_NAME_MACD_VALUE2 = "MACD_VALUE2";
+const QString SQLiteHandler::COLUMN_NAME_MACD_RANK1 = "MACD_RANK1";
+const QString SQLiteHandler::COLUMN_NAME_MACD_RANK2 = "MACD_RANK2";
+const QString SQLiteHandler::COLUMN_NAME_RSI_VALUE1 = "RSI_VALUE1";
+const QString SQLiteHandler::COLUMN_NAME_RSI_VALUE2 = "RSI_VALUE2";
+const QString SQLiteHandler::COLUMN_NAME_RSI_RANK1 = "RSI_RANK1";
+const QString SQLiteHandler::COLUMN_NAME_RSI_RANK2 = "RSI_RANK2";
+const QString SQLiteHandler::COLUMN_NAME_SLOWK_VALUE1 = "SLOWK_VALUE1";
+const QString SQLiteHandler::COLUMN_NAME_SLOWK_VALUE2 = "SLOWK_VALUE2";
+const QString SQLiteHandler::COLUMN_NAME_SLOWK_RANK1 = "SLOWK_RANK1";
+const QString SQLiteHandler::COLUMN_NAME_SLOWK_RANK2 = "SLOWK_RANK2";
+const QString SQLiteHandler::COLUMN_NAME_SLOWD_VALUE1 = "SLOWD_VALUE1";
+const QString SQLiteHandler::COLUMN_NAME_SLOWD_VALUE2 = "SLOWD_VALUE2";
+const QString SQLiteHandler::COLUMN_NAME_SLOWD_RANK1 = "SLOWD_RANK1";
+const QString SQLiteHandler::COLUMN_NAME_SLOWD_RANK2 = "SLOWD_RANK2";
 const QString SQLiteHandler::COLUMN_NAME_DATETIME_UB = "Datetime_UB";
 const QString SQLiteHandler::COLUMN_NAME_DATETIME_LB = "Datetime_LB";
 const QString SQLiteHandler::COLUMN_NAME_CGF = "CGF";
@@ -122,8 +136,7 @@ const QString SQLiteHandler::COLUMN_NAME_N_DISTCF = "N_DistCF";
 const QString SQLiteHandler::COLUMN_NAME_N_DISTCS = "N_DistCS";
 const QString SQLiteHandler::COLUMN_NAME_DISTCF_RANK = "DistCF_Rank";
 const QString SQLiteHandler::COLUMN_NAME_DISTCS_RANK = "DistCS_Rank";
-
-const QString SQLiteHandler::COLUMN_NAME_RES = "Res";
+const QString SQLiteHandler::COLUMN_NAME_RES = "Res"; // XX
 const QString SQLiteHandler::COLUMN_NAME_DISTRES = "DistRes";
 const QString SQLiteHandler::COLUMN_NAME_DISTRES_ATR = "DistResATR";
 const QString SQLiteHandler::COLUMN_NAME_DISTRES_RANK = "DistResRank";
@@ -132,29 +145,36 @@ const QString SQLiteHandler::COLUMN_NAME_DISTSUP = "DistSup";
 const QString SQLiteHandler::COLUMN_NAME_DISTSUP_ATR = "DistSupATR";
 const QString SQLiteHandler::COLUMN_NAME_DISTSUP_RANK = "DistSupRank";
 const QString SQLiteHandler::COLUMN_NAME_DAILY_RLINE = "Daily_RLine";
-const QString SQLiteHandler::COLUMN_NAME_DAILY_RLINE_F = "Daily_RLineF";
-const QString SQLiteHandler::COLUMN_NAME_DAILY_RLINE_S = "Daily_RLineS";
 const QString SQLiteHandler::COLUMN_NAME_DAILY_SLINE = "Daily_SLine";
-const QString SQLiteHandler::COLUMN_NAME_DAILY_SLINE_F = "Daily_SLineF";
-const QString SQLiteHandler::COLUMN_NAME_DAILY_SLINE_S = "Daily_SLineS";
 const QString SQLiteHandler::COLUMN_NAME_WEEKLY_RLINE = "Weekly_RLine";
-const QString SQLiteHandler::COLUMN_NAME_WEEKLY_RLINE_F = "Weekly_RLineF";
-const QString SQLiteHandler::COLUMN_NAME_WEEKLY_RLINE_S = "Weekly_RLineS";
 const QString SQLiteHandler::COLUMN_NAME_WEEKLY_SLINE = "Weekly_SLine";
-const QString SQLiteHandler::COLUMN_NAME_WEEKLY_SLINE_F = "Weekly_SLineF";
-const QString SQLiteHandler::COLUMN_NAME_WEEKLY_SLINE_S = "Weekly_SLineS";
 const QString SQLiteHandler::COLUMN_NAME_MONTHLY_RLINE = "Monthly_RLine";
-const QString SQLiteHandler::COLUMN_NAME_MONTHLY_RLINE_F = "Monthly_RLineF";
-const QString SQLiteHandler::COLUMN_NAME_MONTHLY_RLINE_S = "Monthly_RLineS";
 const QString SQLiteHandler::COLUMN_NAME_MONTHLY_SLINE = "Monthly_SLine";
-const QString SQLiteHandler::COLUMN_NAME_MONTHLY_SLINE_F = "Monthly_SLineF";
-const QString SQLiteHandler::COLUMN_NAME_MONTHLY_SLINE_S = "Monthly_SLineS";
-
 const QString SQLiteHandler::COLUMN_NAME_ZONE = "Zone";
 const QString SQLiteHandler::COLUMN_NAME_ZONE_60MIN = "Zone60min";
 const QString SQLiteHandler::COLUMN_NAME_ZONE_DAILY = "ZoneDaily";
 const QString SQLiteHandler::COLUMN_NAME_ZONE_WEEKLY = "ZoneWeekly";
 const QString SQLiteHandler::COLUMN_NAME_ZONE_MONTHLY = "ZoneMonthly";
+const QString SQLiteHandler::COLUMN_NAME_OPEN_ZONE = "Open_Zone";
+const QString SQLiteHandler::COLUMN_NAME_OPEN_ZONE_60MIN = "Open_Zone60min";
+const QString SQLiteHandler::COLUMN_NAME_OPEN_ZONE_DAILY = "Open_ZoneDaily";
+const QString SQLiteHandler::COLUMN_NAME_OPEN_ZONE_WEEKLY = "Open_ZoneWeekly";
+const QString SQLiteHandler::COLUMN_NAME_OPEN_ZONE_MONTHLY = "Open_ZoneMonthly";
+const QString SQLiteHandler::COLUMN_NAME_HIGH_ZONE = "High_Zone";
+const QString SQLiteHandler::COLUMN_NAME_HIGH_ZONE_60MIN = "High_Zone60min";
+const QString SQLiteHandler::COLUMN_NAME_HIGH_ZONE_DAILY = "High_ZoneDaily";
+const QString SQLiteHandler::COLUMN_NAME_HIGH_ZONE_WEEKLY = "High_ZoneWeekly";
+const QString SQLiteHandler::COLUMN_NAME_HIGH_ZONE_MONTHLY = "High_ZoneMonthly";
+const QString SQLiteHandler::COLUMN_NAME_LOW_ZONE = "Low_Zone";
+const QString SQLiteHandler::COLUMN_NAME_LOW_ZONE_60MIN = "Low_Zone60min";
+const QString SQLiteHandler::COLUMN_NAME_LOW_ZONE_DAILY = "Low_ZoneDaily";
+const QString SQLiteHandler::COLUMN_NAME_LOW_ZONE_WEEKLY = "Low_ZoneWeekly";
+const QString SQLiteHandler::COLUMN_NAME_LOW_ZONE_MONTHLY = "Low_ZoneMonthly";
+const QString SQLiteHandler::COLUMN_NAME_CLOSE_ZONE = "Close_Zone";
+const QString SQLiteHandler::COLUMN_NAME_CLOSE_ZONE_60MIN = "Close_Zone60min";
+const QString SQLiteHandler::COLUMN_NAME_CLOSE_ZONE_DAILY = "Close_ZoneDaily";
+const QString SQLiteHandler::COLUMN_NAME_CLOSE_ZONE_WEEKLY = "Close_ZoneWeekly";
+const QString SQLiteHandler::COLUMN_NAME_CLOSE_ZONE_MONTHLY = "Close_ZoneMonthly";
 const QString SQLiteHandler::COLUMN_NAME_RESISTANCE_COUNT = "resistance_count";
 const QString SQLiteHandler::COLUMN_NAME_RESISTANCE_DURATION = "resistance_duration";
 const QString SQLiteHandler::COLUMN_NAME_RESISTANCE_VALUE = "resistance";
@@ -207,6 +227,11 @@ const QString SQLiteHandler::COLUMN_NAME_DIST_ATR = "Dist_ATR";
  * Rev11: ??? - 2015-06-14 (v0.10.2)
  * Add Zone, RLine, SLine, Res_1, Sup_1
  * Renamed columns, such as MACD_GREATER_0 into MACD_G0
+ *
+ * Rev12: ?? - 2015-07-22 (v0.10.7)
+ * Add CGF, CLF, CGS, CLF, RSI, SlowK, SlowD threshold column
+ * Day10, Day50 realtime value column
+ * Zone for OHLC
  */
 const QString SQLiteHandler::SQL_CREATE_TABLE_BARDATA_V2 =
   "CREATE TABLE IF NOT EXISTS " + SQLiteHandler::TABLE_NAME_BARDATA + "("
@@ -248,54 +273,15 @@ const QString SQLiteHandler::SQL_CREATE_TABLE_BARDATA_V2 =
     "PrevBarColor TEXT,"
     "ATR REAL,"
     "ATR_RANK REAL DEFAULT 0,"
-    "FGS_Rank REAL,"
-    "FLS_Rank REAL,"
+    "FGS_RANK REAL,"
+    "FLS_RANK REAL,"
     "FastAvgSlope REAL,"
     "SlowAvgSlope REAL,"
     "FCross INTEGER,"
     "SCross INTEGER,"
-    "DistCC_FSCross REAL," // (Close_curr - Close_since_FS_cross) / ATR
-    "DistCC_FSCross_Rank REAL,"
-    "DistOF REAL," // (Open - FastAvg)
-    "N_DistOF REAL,"
-    "DistOF_Rank REAL DEFAULT 0,"
-    "DistOS REAL," // (Open - SlowAvg)
-    "N_DistOS REAL,"
-    "DistOS_Rank REAL DEFAULT 0,"
-    "DistHF REAL," // (High - FastAvg)
-    "N_DistHF REAL,"
-    "DistHF_Rank REAL DEFAULT 0,"
-    "DistHS REAL," // (High - SlowAvg)
-    "N_DistHS REAL,"
-    "DistHS_Rank REAL DEFAULT 0,"
-    "DistLF REAL," // (Low - FastAvg)
-    "N_DistLF REAL,"
-    "DistLF_Rank REAL DEFAULT 0,"
-    "DistLS REAL," // (Low - SlowAvg)
-    "N_DistLS REAL,"
-    "DistLS_Rank REAL DEFAULT 0,"
-    "DistCF REAL," // (Close - FastAvg)
-    "N_DistCF REAL,"
-    "DistCF_Rank REAL DEFAULT 0,"
-    "DistCS REAL," // (Close - SlowAvg)
-    "N_DistCS REAL,"
-    "DistCS_Rank REAL DEFAULT 0,"
-    "DistFS REAL," // (FastAvg - SlowAvg)
-    "N_DistFS REAL,"
-    "DistFS_Rank REAL DEFAULT 0,"
-
-    "MACD_Rank REAL DEFAULT 0,"
-    "MACD_G0 INTEGER DEFAULT 0,"
-    "MACD_L0 INTEGER DEFAULT 0,"
-    "MACD_G0_Rank REAL DEFAULT 0,"
-    "MACD_L0_Rank REAL DEFAULT 0,"
-    "RSI_G70 INTEGER DEFAULT 0,"
-    "RSI_L30 INTEGER DEFAULT 0,"
-    "SLOWK_G80 INTEGER DEFAULT 0,"
-    "SLOWK_L20 INTEGER DEFAULT 0,"
-    "SLOWD_G80 INTEGER DEFAULT 0,"
-    "SLOWD_L20 INTEGER DEFAULT 0,"
-
+    "PrevDailyATR REAL," // For intra-day: Prev Daily ATR
+    "Day10 REAL," // For intra-day : Daily FastAvg
+    "Day50 REAL," // For intra-day: Daily SlowAvg
     "Candle_Uptail REAL,"
     "Candle_Downtail REAL,"
     "Candle_Body REAL,"
@@ -304,25 +290,193 @@ const QString SQLiteHandler::SQL_CREATE_TABLE_BARDATA_V2 =
     "N_Downtail REAL,"
     "N_Body REAL,"
     "N_TotalLength REAL,"
-    "Candle_Uptail_Rank REAL,"
-    "Candle_Downtail_Rank REAL,"
-    "Candle_Body_Rank REAL,"
-    "Candle_TotalLength_Rank REAL,"
+    "Candle_Uptail_RANK REAL,"
+    "Candle_Downtail_RANK REAL,"
+    "Candle_Body_RANK REAL,"
+    "Candle_TotalLength_RANK REAL,"
     "DateRange REAL," // ( Max(high) - Min(low) ) / ATR
-    "CGF INTEGER DEFAULT 0,"
-    "CGF_Rank REAL DEFAULT 0,"
-    "CLF INTEGER DEFAULT 0,"
-    "CLF_Rank REAL DEFAULT 0,"
-    "CGS INTEGER DEFAULT 0,"
-    "CGS_Rank REAL DEFAULT 0,"
-    "CLS INTEGER DEFAULT 0,"
-    "CLS_Rank REAL DEFAULT 0,"
+
     "Zone INTEGER DEFAULT 0,"
     "Zone60min INTEGER,"
     "ZoneDaily INTEGER,"
     "ZoneWeekly INTEGER,"
     "ZoneMonthly INTEGER,"
-    // DistRes
+
+    // Zone for each OHLC
+    "Open_Zone INTEGER DEFAULT 0,"
+    "Open_Zone60min INTEGER,"
+    "Open_ZoneDaily INTEGER,"
+    "Open_ZoneWeekly INTEGER,"
+    "Open_ZoneMonthly INTEGER,"
+    "High_Zone INTEGER DEFAULT 0,"
+    "High_Zone60min INTEGER,"
+    "High_ZoneDaily INTEGER,"
+    "High_ZoneWeekly INTEGER,"
+    "High_ZoneMonthly INTEGER,"
+    "Low_Zone INTEGER DEFAULT 0,"
+    "Low_Zone60min INTEGER,"
+    "Low_ZoneDaily INTEGER,"
+    "Low_ZoneWeekly INTEGER,"
+    "Low_ZoneMonthly INTEGER,"
+    "Close_Zone INTEGER DEFAULT 0,"
+    "Close_Zone60min INTEGER,"
+    "Close_ZoneDaily INTEGER,"
+    "Close_ZoneWeekly INTEGER,"
+    "Close_ZoneMonthly INTEGER,"
+
+    "DistCC_FSCross REAL," // (Close_curr - Close_since_FS_cross)
+    "DistCC_FSCross_ATR REAL," // (Close_curr - Close_since_FS_cross) / ATR
+    "DistCC_FSCross_RANK REAL,"
+
+    "DistOF REAL," // (Open - FastAvg)
+    "N_DistOF REAL,"
+    "DistOF_RANK REAL DEFAULT 0,"
+    "DistOS REAL," // (Open - SlowAvg)
+    "N_DistOS REAL,"
+    "DistOS_RANK REAL DEFAULT 0,"
+    "DistHF REAL," // (High - FastAvg)
+    "N_DistHF REAL,"
+    "DistHF_RANK REAL DEFAULT 0,"
+    "DistHS REAL," // (High - SlowAvg)
+    "N_DistHS REAL,"
+    "DistHS_RANK REAL DEFAULT 0,"
+    "DistLF REAL," // (Low - FastAvg)
+    "N_DistLF REAL,"
+    "DistLF_RANK REAL DEFAULT 0,"
+    "DistLS REAL," // (Low - SlowAvg)
+    "N_DistLS REAL,"
+    "DistLS_RANK REAL DEFAULT 0,"
+    "DistCF REAL," // (Close - FastAvg)
+    "N_DistCF REAL,"
+    "DistCF_RANK REAL DEFAULT 0,"
+    "DistCS REAL," // (Close - SlowAvg)
+    "N_DistCS REAL,"
+    "DistCS_RANK REAL DEFAULT 0,"
+    "DistFS REAL," // (FastAvg - SlowAvg)
+    "N_DistFS REAL,"
+    "DistFS_RANK REAL DEFAULT 0,"
+    "MACD_RANK REAL DEFAULT 0," // general (positive and negative)
+
+//    "MACD_L0 INTEGER,"
+//    "MACD_G0 INTEGER,"
+//    "MACD_L0_RANK REAL,"
+//    "MACD_G0_RANK REAL,"
+    "MACD_VALUE1_1 INTEGER," // MACD < 0
+    "MACD_RANK1_1 REAL,"
+    "MACD_VALUE2_1 INTEGER," // MACD > 0
+    "MACD_RANK2_1 REAL,"
+    "MACD_VALUE1_2 INTEGER,"
+    "MACD_RANK1_2 REAL,"
+    "MACD_VALUE2_2 INTEGER,"
+    "MACD_RANK2_2 REAL,"
+    "MACD_VALUE1_3 INTEGER,"
+    "MACD_RANK1_3 REAL,"
+    "MACD_VALUE2_3 INTEGER,"
+    "MACD_RANK2_3 REAL,"
+
+//    "RSI_L30 INTEGER,"
+//    "RSI_G70 INTEGER,"
+    "RSI_VALUE1_1 INTEGER," // RSI < 30
+    "RSI_RANK1_1 REAL,"
+    "RSI_VALUE2_1 INTEGER," // RSI > 70
+    "RSI_RANK2_1 REAL,"
+    "RSI_VALUE1_2 INTEGER,"
+    "RSI_RANK1_2 REAL,"
+    "RSI_VALUE2_2 INTEGER,"
+    "RSI_RANK2_2 REAL,"
+    "RSI_VALUE1_3 INTEGER,"
+    "RSI_RANK1_3 REAL,"
+    "RSI_VALUE2_3 INTEGER,"
+    "RSI_RANK2_3 REAL,"
+
+//    "SLOWK_L20 INTEGER,"
+//    "SLOWK_G80 INTEGER,"
+    "SLOWK_VALUE1_1 INTEGER," // SLOWK < 20
+    "SLOWK_RANK1_1 REAL,"
+    "SLOWK_VALUE2_1 INTEGER," // SLOWK > 80
+    "SLOWK_RANK2_1 REAL,"
+    "SLOWK_VALUE1_2 INTEGER,"
+    "SLOWK_RANK1_2 REAL,"
+    "SLOWK_VALUE2_2 INTEGER,"
+    "SLOWK_RANK2_2 REAL,"
+    "SLOWK_VALUE1_3 INTEGER,"
+    "SLOWK_RANK1_3 REAL,"
+    "SLOWK_VALUE2_3 INTEGER,"
+    "SLOWK_RANK2_3 REAL,"
+
+//    "SLOWD_L20 INTEGER,"
+//    "SLOWD_G80 INTEGER,"
+    "SLOWD_VALUE1_1 INTEGER DEFAULT 0," // SLOWD < 20
+    "SLOWD_RANK1_1 REAL,"
+    "SLOWD_VALUE2_1 INTEGER," // SLOWD > 80
+    "SLOWD_RANK2_1 REAL,"
+    "SLOWD_VALUE1_2 INTEGER,"
+    "SLOWD_RANK1_2 REAL,"
+    "SLOWD_VALUE2_2 INTEGER,"
+    "SLOWD_RANK2_2 REAL,"
+    "SLOWD_VALUE1_3 INTEGER,"
+    "SLOWD_RANK1_3 REAL,"
+    "SLOWD_VALUE2_3 INTEGER,"
+    "SLOWD_RANK2_3 REAL,"
+
+    "CGF INTEGER DEFAULT 0,"
+    "CGF_RANK REAL DEFAULT 0,"
+    "CLF INTEGER DEFAULT 0,"
+    "CLF_RANK REAL DEFAULT 0,"
+    "CGS INTEGER DEFAULT 0,"
+    "CGS_RANK REAL DEFAULT 0,"
+    "CLS INTEGER DEFAULT 0,"
+    "CLS_RANK REAL DEFAULT 0,"
+
+    "CGF_0 INTEGER DEFAULT 0,"
+    "CGF_RANK_0 REAL DEFAULT 0,"
+    "CLF_0 INTEGER DEFAULT 0,"
+    "CLF_RANK_0 REAL DEFAULT 0,"
+    "CGS_0 INTEGER DEFAULT 0,"
+    "CGS_RANK_0 REAL DEFAULT 0,"
+    "CLS_0 INTEGER DEFAULT 0,"
+    "CLS_RANK_0 REAL DEFAULT 0,"
+
+    "CGF_1 INTEGER DEFAULT 0,"
+    "CGF_RANK_1 REAL DEFAULT 0,"
+    "CLF_1 INTEGER DEFAULT 0,"
+    "CLF_RANK_1 REAL DEFAULT 0,"
+    "CGS_1 INTEGER DEFAULT 0,"
+    "CGS_RANK_1 REAL DEFAULT 0,"
+    "CLS_1 INTEGER DEFAULT 0,"
+    "CLS_RANK_1 REAL DEFAULT 0,"
+
+    "CGF_2 INTEGER DEFAULT 0,"
+    "CGF_RANK_2 REAL DEFAULT 0,"
+    "CLF_2 INTEGER DEFAULT 0,"
+    "CLF_RANK_2 REAL DEFAULT 0,"
+    "CGS_2 INTEGER DEFAULT 0,"
+    "CGS_RANK_2 REAL DEFAULT 0,"
+    "CLS_2 INTEGER DEFAULT 0,"
+    "CLS_RANK_2 REAL DEFAULT 0,"
+
+    "CGF_3 INTEGER DEFAULT 0,"
+    "CGF_RANK_3 REAL DEFAULT 0,"
+    "CLF_3 INTEGER DEFAULT 0,"
+    "CLF_RANK_3 REAL DEFAULT 0,"
+    "CGS_3 INTEGER DEFAULT 0,"
+    "CGS_RANK_3 REAL DEFAULT 0,"
+    "CLS_3 INTEGER DEFAULT 0,"
+    "CLS_RANK_3 REAL DEFAULT 0,"
+
+    "CGF_4 INTEGER DEFAULT 0,"
+    "CGF_RANK_4 REAL DEFAULT 0,"
+    "CLF_4 INTEGER DEFAULT 0,"
+    "CLF_RANK_4 REAL DEFAULT 0,"
+    "CGS_4 INTEGER DEFAULT 0,"
+    "CGS_RANK_4 REAL DEFAULT 0,"
+    "CLS_4 INTEGER DEFAULT 0,"
+    "CLS_RANK_4 REAL DEFAULT 0,"
+
+//    "Res_0 REAL,"
+//    "DistRes_0 REAL,"
+//    "DistResATR_0 REAL,"
+//    "DistResRank_0 REAL,"
     "Res_1 REAL,"
     "DistRes_1 REAL," // Min(Resistance) - Close
     "DistResATR_1 REAL," // DistRes / ATR
@@ -335,7 +489,19 @@ const QString SQLiteHandler::SQL_CREATE_TABLE_BARDATA_V2 =
     "DistRes_3 REAL,"
     "DistResATR_3 REAL,"
     "DistResRank_3 REAL,"
-    // DistSup
+    "Res_4 REAL,"
+    "DistRes_4 REAL,"
+    "DistResATR_4 REAL,"
+    "DistResRank_4 REAL,"
+    "Res_5 REAL,"
+    "DistRes_5 REAL,"
+    "DistResATR_5 REAL,"
+    "DistResRank_5 REAL,"
+
+//    "Sup_0 REAL,"
+//    "DistSup_0 REAL,"
+//    "DistSupATR_0 REAL,"
+//    "DistSupRank_0 REAL,"
     "Sup_1 REAL,"
     "DistSup_1 REAL," // Max(Support) - Close
     "DistSupATR_1 REAL," // DistSup / ATR
@@ -348,66 +514,59 @@ const QString SQLiteHandler::SQL_CREATE_TABLE_BARDATA_V2 =
     "DistSup_3 REAL,"
     "DistSupATR_3 REAL,"
     "DistSupRank_3 REAL,"
+    "Sup_4 REAL,"
+    "DistSup_4 REAL,"
+    "DistSupATR_4 REAL,"
+    "DistSupRank_4 REAL,"
+    "Sup_5 REAL,"
+    "DistSup_5 REAL,"
+    "DistSupATR_5 REAL,"
+    "DistSupRank_5 REAL,"
+
     // Daily
+//    "Daily_RLine_0 INTEGER,"
+//    "Daily_SLine_0 INTEGER,"
     "Daily_RLine_1 INTEGER," // Resistance (#)
     "Daily_SLine_1 INTEGER," // Support (#)
     "Daily_RLine_2 INTEGER,"
     "Daily_SLine_2 INTEGER,"
     "Daily_RLine_3 INTEGER,"
     "Daily_SLine_3 INTEGER,"
+    "Daily_RLine_4 INTEGER,"
+    "Daily_SLine_4 INTEGER,"
+    "Daily_RLine_5 INTEGER,"
+    "Daily_SLine_5 INTEGER,"
+
     // Weekly
+//    "Weekly_RLine_0 INTEGER,"
+//    "Weekly_SLine_0 INTEGER,"
     "Weekly_RLine_1 INTEGER,"
     "Weekly_SLine_1 INTEGER,"
     "Weekly_RLine_2 INTEGER,"
     "Weekly_SLine_2 INTEGER,"
     "Weekly_RLine_3 INTEGER,"
     "Weekly_SLine_3 INTEGER,"
+    "Weekly_RLine_4 INTEGER,"
+    "Weekly_SLine_4 INTEGER,"
+    "Weekly_RLine_5 INTEGER,"
+    "Weekly_SLine_5 INTEGER,"
+
     // Monthly
+//    "Monthly_RLine_0 INTEGER,"
+//    "Monthly_SLine_0 INTEGER,"
     "Monthly_RLine_1 INTEGER,"
     "Monthly_SLine_1 INTEGER,"
     "Monthly_RLine_2 INTEGER,"
     "Monthly_SLine_2 INTEGER,"
     "Monthly_RLine_3 INTEGER,"
     "Monthly_SLine_3 INTEGER,"
-    "PRIMARY KEY(date_ ASC,time_ ASC));";
+    "Monthly_RLine_4 INTEGER,"
+    "Monthly_SLine_4 INTEGER,"
+    "Monthly_RLine_5 INTEGER,"
+    "Monthly_SLine_5 INTEGER,"
 
+    "PRIMARY KEY(date_ ASC,time_ ASC));";
 //    "DistFS_bin_id INTEGER DEFAULT 0,"
-//    "Daily_RLineF_1 INTEGER," // Res-F (#)
-//    "Daily_RLineS_1 INTEGER," // Res-S (#)
-//    "Daily_SLineF_1 INTEGER," // Sup-F (#)
-//    "Daily_SLineS_1 INTEGER," // Sup-S (#)
-//    "Daily_RLineF_2 INTEGER,"
-//    "Daily_RLineS_2 INTEGER,"
-//    "Daily_SLineF_2 INTEGER,"
-//    "Daily_SLineS_2 INTEGER,"
-//    "Daily_RLineF_3 INTEGER,"
-//    "Daily_RLineS_3 INTEGER,"
-//    "Daily_SLineF_3 INTEGER,"
-//    "Daily_SLineS_3 INTEGER,"
-//    "Weekly_RLineF_1 INTEGER,"
-//    "Weekly_RLineS_1 INTEGER,"
-//    "Weekly_SLineF_1 INTEGER,"
-//    "Weekly_SLineS_1 INTEGER,"
-//    "Weekly_RLineF_2 INTEGER,"
-//    "Weekly_RLineS_2 INTEGER,"
-//    "Weekly_SLineF_2 INTEGER,"
-//    "Weekly_SLineS_2 INTEGER,"
-//    "Weekly_RLineF_3 INTEGER,"
-//    "Weekly_RLineS_3 INTEGER,"
-//    "Weekly_SLineF_3 INTEGER,"
-//    "Weekly_SLineS_3 INTEGER,"
-//    "Monthly_RLineF_1 INTEGER,"
-//    "Monthly_RLineS_1 INTEGER,"
-//    "Monthly_SLineF_1 INTEGER,"
-//    "Monthly_SLineS_1 INTEGER,"
-//    "Monthly_RLineF_2 INTEGER,"
-//    "Monthly_RLineS_2 INTEGER,"
-//    "Monthly_SLineF_2 INTEGER,"
-//    "Monthly_SLineS_2 INTEGER,"
-//    "Monthly_RLineF_3 INTEGER,"
-//    "Monthly_RLineS_3 INTEGER,"
-//    "Monthly_SLineF_3 INTEGER,"
-//    "Monthly_SLineS_3 INTEGER,"
 
 /**
  * Resistance & Support V1
@@ -423,6 +582,7 @@ const QString SQLiteHandler::SQL_CREATE_TABLE_RESISTANCE_V1 =
   "resistance_duration INTEGER,"
   "resistance REAL,"
   "last_duration INTEGER,"
+  "first_duration INTEGER,"
   "id_threshold INTEGER,"
   "dist_point REAL,"
   "dist_atr REAL,"
@@ -438,6 +598,7 @@ const QString SQLiteHandler::SQL_CREATE_TABLE_SUPPORT_V1 =
   "support_duration INTEGER,"
   "support REAL,"
   "last_duration INTEGER,"
+  "first_duration INTEGER,"
   "id_threshold INTEGER,"
   "dist_point REAL,"
   "dist_atr REAL,"
@@ -768,14 +929,14 @@ QStringList SQLiteHandler::SQL_UPDATE_BARDATA_PARENT_INDEX_V2(const QString &par
 const QString SQLiteHandler::SQL_INSERT_RESISTANCE_V1 =
   "INSERT OR IGNORE INTO " + TABLE_NAME_RESISTANCE +
   "(date_, time_, react_date, react_time, resistance_count, resistance,"
-   "resistance_duration, last_duration, id_threshold)"
-  " VALUES(?,?,?,?,?, ?,?,?,?)";
+   "resistance_duration, last_duration, first_duration, id_threshold)"
+  " VALUES(?,?,?,?,?, ?,?,?,?,?)";
 
 const QString SQLiteHandler::SQL_INSERT_SUPPORT_V1 =
   "INSERT OR IGNORE INTO " + TABLE_NAME_SUPPORT +
   "(date_, time_, react_date, react_time, support_count, support,"
-  "support_duration, last_duration, id_threshold)"
-  " VALUES(?,?,?,?,?, ?,?,?,?)";
+  "support_duration, last_duration, first_duration, id_threshold)"
+  " VALUES(?,?,?,?,?, ?,?,?,?,?)";
 
 
 //

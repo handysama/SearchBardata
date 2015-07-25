@@ -9,8 +9,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>480</width>
-    <height>280</height>
+    <width>485</width>
+    <height>300</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -20,7 +20,7 @@
    </sizepolicy>
   </property>
   <property name="windowTitle">
-   <string>Resistance and Support Parameters</string>
+   <string>Threshold For Refresh Database</string>
   </property>
   <property name="windowOpacity">
    <double>1.000000000000000</double>
@@ -31,8 +31,8 @@
   <widget class="QPushButton" name="btnSave">
    <property name="geometry">
     <rect>
-     <x>200</x>
-     <y>250</y>
+     <x>160</x>
+     <y>265</y>
      <width>71</width>
      <height>23</height>
     </rect>
@@ -46,12 +46,12 @@
     <rect>
      <x>5</x>
      <y>5</y>
-     <width>470</width>
-     <height>241</height>
+     <width>475</width>
+     <height>250</height>
     </rect>
    </property>
    <property name="currentIndex">
-    <number>0</number>
+    <number>5</number>
    </property>
    <widget class="QWidget" name="tab">
     <attribute name="title">
@@ -463,7 +463,7 @@
     <attribute name="title">
      <string>MACD</string>
     </attribute>
-    <widget class="QDoubleSpinBox" name="doubleSpinBox">
+    <widget class="QDoubleSpinBox" name="sbMACD_value1_1">
      <property name="geometry">
       <rect>
        <x>160</x>
@@ -473,7 +473,7 @@
       </rect>
      </property>
     </widget>
-    <widget class="QComboBox" name="comboBox">
+    <widget class="QComboBox" name="cbMACD_operator1_1">
      <property name="geometry">
       <rect>
        <x>80</x>
@@ -509,7 +509,7 @@
       <string>Threshold 2</string>
      </property>
     </widget>
-    <widget class="QComboBox" name="comboBox_2">
+    <widget class="QComboBox" name="cbMACD_operator1_2">
      <property name="geometry">
       <rect>
        <x>80</x>
@@ -519,7 +519,7 @@
       </rect>
      </property>
     </widget>
-    <widget class="QDoubleSpinBox" name="doubleSpinBox_2">
+    <widget class="QDoubleSpinBox" name="sbMACD_value1_2">
      <property name="geometry">
       <rect>
        <x>160</x>
@@ -542,7 +542,7 @@
       <string>Threshold 3</string>
      </property>
     </widget>
-    <widget class="QComboBox" name="comboBox_3">
+    <widget class="QComboBox" name="cbMACD_operator1_3">
      <property name="geometry">
       <rect>
        <x>80</x>
@@ -552,10 +552,70 @@
       </rect>
      </property>
     </widget>
-    <widget class="QDoubleSpinBox" name="doubleSpinBox_3">
+    <widget class="QDoubleSpinBox" name="sbMACD_value1_3">
      <property name="geometry">
       <rect>
        <x>160</x>
+       <y>70</y>
+       <width>62</width>
+       <height>22</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QComboBox" name="cbMACD_operator2_1">
+     <property name="geometry">
+      <rect>
+       <x>230</x>
+       <y>10</y>
+       <width>69</width>
+       <height>22</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QDoubleSpinBox" name="sbMACD_value2_1">
+     <property name="geometry">
+      <rect>
+       <x>310</x>
+       <y>10</y>
+       <width>62</width>
+       <height>22</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QComboBox" name="cbMACD_operator2_2">
+     <property name="geometry">
+      <rect>
+       <x>230</x>
+       <y>40</y>
+       <width>69</width>
+       <height>22</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QDoubleSpinBox" name="sbMACD_value2_2">
+     <property name="geometry">
+      <rect>
+       <x>310</x>
+       <y>40</y>
+       <width>62</width>
+       <height>22</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QComboBox" name="cbMACD_operator2_3">
+     <property name="geometry">
+      <rect>
+       <x>230</x>
+       <y>70</y>
+       <width>69</width>
+       <height>22</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QDoubleSpinBox" name="sbMACD_value2_3">
+     <property name="geometry">
+      <rect>
+       <x>310</x>
        <y>70</y>
        <width>62</width>
        <height>22</height>
@@ -580,7 +640,7 @@
       <string>Threshold 2</string>
      </property>
     </widget>
-    <widget class="QDoubleSpinBox" name="doubleSpinBox_6">
+    <widget class="QDoubleSpinBox" name="sbRSI_value1_1">
      <property name="geometry">
       <rect>
        <x>160</x>
@@ -603,7 +663,7 @@
       <string>Threshold 1</string>
      </property>
     </widget>
-    <widget class="QComboBox" name="comboBox_6">
+    <widget class="QComboBox" name="cbRSI_operator1_2">
      <property name="geometry">
       <rect>
        <x>80</x>
@@ -626,7 +686,7 @@
       <string>Threshold 3</string>
      </property>
     </widget>
-    <widget class="QComboBox" name="comboBox_5">
+    <widget class="QComboBox" name="cbRSI_operator1_3">
      <property name="geometry">
       <rect>
        <x>80</x>
@@ -636,7 +696,7 @@
       </rect>
      </property>
     </widget>
-    <widget class="QDoubleSpinBox" name="doubleSpinBox_4">
+    <widget class="QDoubleSpinBox" name="sbRSI_value1_3">
      <property name="geometry">
       <rect>
        <x>160</x>
@@ -646,7 +706,7 @@
       </rect>
      </property>
     </widget>
-    <widget class="QDoubleSpinBox" name="doubleSpinBox_5">
+    <widget class="QDoubleSpinBox" name="sbRSI_value1_2">
      <property name="geometry">
       <rect>
        <x>160</x>
@@ -656,12 +716,72 @@
       </rect>
      </property>
     </widget>
-    <widget class="QComboBox" name="comboBox_4">
+    <widget class="QComboBox" name="cbRSI_operator1_1">
      <property name="geometry">
       <rect>
        <x>80</x>
        <y>10</y>
        <width>69</width>
+       <height>22</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QDoubleSpinBox" name="sbRSI_value2_1">
+     <property name="geometry">
+      <rect>
+       <x>310</x>
+       <y>10</y>
+       <width>62</width>
+       <height>22</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QComboBox" name="cbRSI_operator2_1">
+     <property name="geometry">
+      <rect>
+       <x>230</x>
+       <y>10</y>
+       <width>69</width>
+       <height>22</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QComboBox" name="cbRSI_operator2_2">
+     <property name="geometry">
+      <rect>
+       <x>230</x>
+       <y>40</y>
+       <width>69</width>
+       <height>22</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QDoubleSpinBox" name="sbRSI_value2_2">
+     <property name="geometry">
+      <rect>
+       <x>310</x>
+       <y>40</y>
+       <width>62</width>
+       <height>22</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QComboBox" name="cbRSI_operator2_3">
+     <property name="geometry">
+      <rect>
+       <x>230</x>
+       <y>70</y>
+       <width>69</width>
+       <height>22</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QDoubleSpinBox" name="sbRSI_value2_3">
+     <property name="geometry">
+      <rect>
+       <x>310</x>
+       <y>70</y>
+       <width>62</width>
        <height>22</height>
       </rect>
      </property>
@@ -684,7 +804,7 @@
       <string>Threshold 2</string>
      </property>
     </widget>
-    <widget class="QDoubleSpinBox" name="doubleSpinBox_8">
+    <widget class="QDoubleSpinBox" name="sbSlowK_value1_2">
      <property name="geometry">
       <rect>
        <x>160</x>
@@ -707,7 +827,7 @@
       <string>Threshold 3</string>
      </property>
     </widget>
-    <widget class="QComboBox" name="comboBox_9">
+    <widget class="QComboBox" name="cbSlowK_operator1_2">
      <property name="geometry">
       <rect>
        <x>80</x>
@@ -730,7 +850,7 @@
       <string>Threshold 1</string>
      </property>
     </widget>
-    <widget class="QDoubleSpinBox" name="doubleSpinBox_9">
+    <widget class="QDoubleSpinBox" name="sbSlowK_value1_1">
      <property name="geometry">
       <rect>
        <x>160</x>
@@ -740,7 +860,7 @@
       </rect>
      </property>
     </widget>
-    <widget class="QDoubleSpinBox" name="doubleSpinBox_7">
+    <widget class="QDoubleSpinBox" name="sbSlowK_value1_3">
      <property name="geometry">
       <rect>
        <x>160</x>
@@ -750,7 +870,7 @@
       </rect>
      </property>
     </widget>
-    <widget class="QComboBox" name="comboBox_7">
+    <widget class="QComboBox" name="cbSlowK_operator1_1">
      <property name="geometry">
       <rect>
        <x>80</x>
@@ -760,12 +880,72 @@
       </rect>
      </property>
     </widget>
-    <widget class="QComboBox" name="comboBox_8">
+    <widget class="QComboBox" name="cbSlowK_operator1_3">
      <property name="geometry">
       <rect>
        <x>80</x>
        <y>70</y>
        <width>69</width>
+       <height>22</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QComboBox" name="cbSlowK_operator2_1">
+     <property name="geometry">
+      <rect>
+       <x>230</x>
+       <y>10</y>
+       <width>69</width>
+       <height>22</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QDoubleSpinBox" name="sbSlowK_value2_1">
+     <property name="geometry">
+      <rect>
+       <x>310</x>
+       <y>10</y>
+       <width>62</width>
+       <height>22</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QComboBox" name="cbSlowK_operator2_2">
+     <property name="geometry">
+      <rect>
+       <x>230</x>
+       <y>40</y>
+       <width>69</width>
+       <height>22</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QDoubleSpinBox" name="sbSlowK_value2_2">
+     <property name="geometry">
+      <rect>
+       <x>310</x>
+       <y>40</y>
+       <width>62</width>
+       <height>22</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QComboBox" name="cbSlowK_operator2_3">
+     <property name="geometry">
+      <rect>
+       <x>230</x>
+       <y>70</y>
+       <width>69</width>
+       <height>22</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QDoubleSpinBox" name="sbSlowK_value2_3">
+     <property name="geometry">
+      <rect>
+       <x>310</x>
+       <y>70</y>
+       <width>62</width>
        <height>22</height>
       </rect>
      </property>
@@ -788,7 +968,7 @@
       <string>Threshold 2</string>
      </property>
     </widget>
-    <widget class="QComboBox" name="comboBox_12">
+    <widget class="QComboBox" name="cbSlowD_operator1_2">
      <property name="geometry">
       <rect>
        <x>80</x>
@@ -811,7 +991,7 @@
       <string>Threshold 1</string>
      </property>
     </widget>
-    <widget class="QDoubleSpinBox" name="doubleSpinBox_10">
+    <widget class="QDoubleSpinBox" name="sbSlowD_value1_3">
      <property name="geometry">
       <rect>
        <x>160</x>
@@ -821,7 +1001,7 @@
       </rect>
      </property>
     </widget>
-    <widget class="QDoubleSpinBox" name="doubleSpinBox_11">
+    <widget class="QDoubleSpinBox" name="sbSlowD_value1_2">
      <property name="geometry">
       <rect>
        <x>160</x>
@@ -844,7 +1024,7 @@
       <string>Threshold 3</string>
      </property>
     </widget>
-    <widget class="QComboBox" name="comboBox_11">
+    <widget class="QComboBox" name="cbSlowD_operator1_3">
      <property name="geometry">
       <rect>
        <x>80</x>
@@ -854,7 +1034,7 @@
       </rect>
      </property>
     </widget>
-    <widget class="QComboBox" name="comboBox_10">
+    <widget class="QComboBox" name="cbSlowD_operator1_1">
      <property name="geometry">
       <rect>
        <x>80</x>
@@ -864,7 +1044,7 @@
       </rect>
      </property>
     </widget>
-    <widget class="QDoubleSpinBox" name="doubleSpinBox_12">
+    <widget class="QDoubleSpinBox" name="sbSlowD_value1_1">
      <property name="geometry">
       <rect>
        <x>160</x>
@@ -874,7 +1054,980 @@
       </rect>
      </property>
     </widget>
+    <widget class="QComboBox" name="cbSlowD_operator2_1">
+     <property name="geometry">
+      <rect>
+       <x>230</x>
+       <y>10</y>
+       <width>69</width>
+       <height>22</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QDoubleSpinBox" name="sbSlowD_value2_1">
+     <property name="geometry">
+      <rect>
+       <x>310</x>
+       <y>10</y>
+       <width>62</width>
+       <height>22</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QComboBox" name="cbSlowD_operator2_2">
+     <property name="geometry">
+      <rect>
+       <x>230</x>
+       <y>40</y>
+       <width>69</width>
+       <height>22</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QDoubleSpinBox" name="sbSlowD_value2_2">
+     <property name="geometry">
+      <rect>
+       <x>310</x>
+       <y>40</y>
+       <width>62</width>
+       <height>22</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QComboBox" name="cbSlowD_operator2_3">
+     <property name="geometry">
+      <rect>
+       <x>230</x>
+       <y>70</y>
+       <width>69</width>
+       <height>22</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QDoubleSpinBox" name="sbSlowD_value2_3">
+     <property name="geometry">
+      <rect>
+       <x>310</x>
+       <y>70</y>
+       <width>62</width>
+       <height>22</height>
+      </rect>
+     </property>
+    </widget>
    </widget>
+   <widget class="QWidget" name="tab_6">
+    <attribute name="title">
+     <string>C/F</string>
+    </attribute>
+    <widget class="QGroupBox" name="groupBox_3">
+     <property name="geometry">
+      <rect>
+       <x>5</x>
+       <y>40</y>
+       <width>225</width>
+       <height>181</height>
+      </rect>
+     </property>
+     <property name="title">
+      <string>C &gt; F</string>
+     </property>
+     <widget class="QDoubleSpinBox" name="sbCGF_3">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="geometry">
+       <rect>
+        <x>90</x>
+        <y>80</y>
+        <width>62</width>
+        <height>22</height>
+       </rect>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_29">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>20</y>
+        <width>71</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Threshold 1</string>
+      </property>
+     </widget>
+     <widget class="QDoubleSpinBox" name="sbCGF_2">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="geometry">
+       <rect>
+        <x>90</x>
+        <y>50</y>
+        <width>62</width>
+        <height>22</height>
+       </rect>
+      </property>
+     </widget>
+     <widget class="QCheckBox" name="chkCGF_1">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="geometry">
+       <rect>
+        <x>160</x>
+        <y>20</y>
+        <width>60</width>
+        <height>17</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Not Set</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_31">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>50</y>
+        <width>71</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Threshold 2</string>
+      </property>
+     </widget>
+     <widget class="QDoubleSpinBox" name="sbCGF_1">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="geometry">
+       <rect>
+        <x>90</x>
+        <y>20</y>
+        <width>62</width>
+        <height>22</height>
+       </rect>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_30">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>80</y>
+        <width>71</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Threshold 3</string>
+      </property>
+     </widget>
+     <widget class="QCheckBox" name="chkCGF_2">
+      <property name="geometry">
+       <rect>
+        <x>160</x>
+        <y>50</y>
+        <width>60</width>
+        <height>17</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Not Set</string>
+      </property>
+     </widget>
+     <widget class="QCheckBox" name="chkCGF_3">
+      <property name="geometry">
+       <rect>
+        <x>160</x>
+        <y>80</y>
+        <width>60</width>
+        <height>17</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Not Set</string>
+      </property>
+     </widget>
+     <widget class="QCheckBox" name="chkCGF_4">
+      <property name="geometry">
+       <rect>
+        <x>160</x>
+        <y>110</y>
+        <width>60</width>
+        <height>17</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Not Set</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_43">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>110</y>
+        <width>71</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Threshold 4</string>
+      </property>
+     </widget>
+     <widget class="QDoubleSpinBox" name="sbCGF_4">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="geometry">
+       <rect>
+        <x>90</x>
+        <y>110</y>
+        <width>62</width>
+        <height>22</height>
+       </rect>
+      </property>
+     </widget>
+     <widget class="QCheckBox" name="chkCGF_5">
+      <property name="geometry">
+       <rect>
+        <x>160</x>
+        <y>140</y>
+        <width>60</width>
+        <height>17</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Not Set</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_44">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>140</y>
+        <width>71</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Threshold 5</string>
+      </property>
+     </widget>
+     <widget class="QDoubleSpinBox" name="sbCGF_5">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="geometry">
+       <rect>
+        <x>90</x>
+        <y>140</y>
+        <width>62</width>
+        <height>22</height>
+       </rect>
+      </property>
+     </widget>
+    </widget>
+    <widget class="QGroupBox" name="groupBox_4">
+     <property name="geometry">
+      <rect>
+       <x>235</x>
+       <y>40</y>
+       <width>225</width>
+       <height>181</height>
+      </rect>
+     </property>
+     <property name="title">
+      <string>C &lt; F</string>
+     </property>
+     <widget class="QLabel" name="label_32">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>20</y>
+        <width>71</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Threshold 1</string>
+      </property>
+     </widget>
+     <widget class="QCheckBox" name="chkCLF_2">
+      <property name="geometry">
+       <rect>
+        <x>160</x>
+        <y>50</y>
+        <width>60</width>
+        <height>17</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Not Set</string>
+      </property>
+     </widget>
+     <widget class="QCheckBox" name="chkCLF_3">
+      <property name="geometry">
+       <rect>
+        <x>160</x>
+        <y>80</y>
+        <width>60</width>
+        <height>17</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Not Set</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_45">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>110</y>
+        <width>71</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Threshold 4</string>
+      </property>
+     </widget>
+     <widget class="QDoubleSpinBox" name="sbCLF_5">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="geometry">
+       <rect>
+        <x>90</x>
+        <y>140</y>
+        <width>62</width>
+        <height>22</height>
+       </rect>
+      </property>
+     </widget>
+     <widget class="QCheckBox" name="chkCLF_1">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="geometry">
+       <rect>
+        <x>160</x>
+        <y>20</y>
+        <width>60</width>
+        <height>17</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Not Set</string>
+      </property>
+     </widget>
+     <widget class="QCheckBox" name="chkCLF_4">
+      <property name="geometry">
+       <rect>
+        <x>160</x>
+        <y>110</y>
+        <width>60</width>
+        <height>17</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Not Set</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_46">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>140</y>
+        <width>71</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Threshold 5</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_33">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>80</y>
+        <width>71</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Threshold 3</string>
+      </property>
+     </widget>
+     <widget class="QDoubleSpinBox" name="sbCLF_3">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="geometry">
+       <rect>
+        <x>90</x>
+        <y>80</y>
+        <width>62</width>
+        <height>22</height>
+       </rect>
+      </property>
+     </widget>
+     <widget class="QCheckBox" name="chkCLF_5">
+      <property name="geometry">
+       <rect>
+        <x>160</x>
+        <y>140</y>
+        <width>60</width>
+        <height>17</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Not Set</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_34">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>50</y>
+        <width>71</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Threshold 2</string>
+      </property>
+     </widget>
+     <widget class="QDoubleSpinBox" name="sbCLF_4">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="geometry">
+       <rect>
+        <x>90</x>
+        <y>110</y>
+        <width>62</width>
+        <height>22</height>
+       </rect>
+      </property>
+     </widget>
+     <widget class="QDoubleSpinBox" name="sbCLF_1">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="geometry">
+       <rect>
+        <x>90</x>
+        <y>20</y>
+        <width>62</width>
+        <height>22</height>
+       </rect>
+      </property>
+     </widget>
+     <widget class="QDoubleSpinBox" name="sbCLF_2">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="geometry">
+       <rect>
+        <x>90</x>
+        <y>50</y>
+        <width>62</width>
+        <height>22</height>
+       </rect>
+      </property>
+     </widget>
+    </widget>
+    <widget class="QLabel" name="label_41">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>14</y>
+       <width>47</width>
+       <height>13</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Symbol</string>
+     </property>
+    </widget>
+    <widget class="QComboBox" name="cbSymbol_CF">
+     <property name="geometry">
+      <rect>
+       <x>90</x>
+       <y>10</y>
+       <width>70</width>
+       <height>22</height>
+      </rect>
+     </property>
+    </widget>
+   </widget>
+   <widget class="QWidget" name="tab_7">
+    <attribute name="title">
+     <string>C/S</string>
+    </attribute>
+    <widget class="QGroupBox" name="groupBox_5">
+     <property name="geometry">
+      <rect>
+       <x>235</x>
+       <y>40</y>
+       <width>225</width>
+       <height>181</height>
+      </rect>
+     </property>
+     <property name="title">
+      <string>C &lt; S</string>
+     </property>
+     <widget class="QLabel" name="label_38">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>20</y>
+        <width>71</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Threshold 1</string>
+      </property>
+     </widget>
+     <widget class="QCheckBox" name="chkCLS_2">
+      <property name="geometry">
+       <rect>
+        <x>160</x>
+        <y>50</y>
+        <width>60</width>
+        <height>17</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Not Set</string>
+      </property>
+     </widget>
+     <widget class="QCheckBox" name="chkCLS_3">
+      <property name="geometry">
+       <rect>
+        <x>160</x>
+        <y>80</y>
+        <width>60</width>
+        <height>17</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Not Set</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_49">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>110</y>
+        <width>71</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Threshold 4</string>
+      </property>
+     </widget>
+     <widget class="QDoubleSpinBox" name="sbCLS_5">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="geometry">
+       <rect>
+        <x>90</x>
+        <y>140</y>
+        <width>62</width>
+        <height>22</height>
+       </rect>
+      </property>
+     </widget>
+     <widget class="QCheckBox" name="chkCLS_1">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="geometry">
+       <rect>
+        <x>160</x>
+        <y>20</y>
+        <width>60</width>
+        <height>17</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Not Set</string>
+      </property>
+     </widget>
+     <widget class="QCheckBox" name="chkCLS_4">
+      <property name="geometry">
+       <rect>
+        <x>160</x>
+        <y>110</y>
+        <width>60</width>
+        <height>17</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Not Set</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_50">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>140</y>
+        <width>71</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Threshold 5</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_39">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>80</y>
+        <width>71</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Threshold 3</string>
+      </property>
+     </widget>
+     <widget class="QDoubleSpinBox" name="sbCLS_3">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="geometry">
+       <rect>
+        <x>90</x>
+        <y>80</y>
+        <width>62</width>
+        <height>22</height>
+       </rect>
+      </property>
+     </widget>
+     <widget class="QCheckBox" name="chkCLS_5">
+      <property name="geometry">
+       <rect>
+        <x>160</x>
+        <y>140</y>
+        <width>60</width>
+        <height>17</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Not Set</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_40">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>50</y>
+        <width>71</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Threshold 2</string>
+      </property>
+     </widget>
+     <widget class="QDoubleSpinBox" name="sbCLS_4">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="geometry">
+       <rect>
+        <x>90</x>
+        <y>110</y>
+        <width>62</width>
+        <height>22</height>
+       </rect>
+      </property>
+     </widget>
+     <widget class="QDoubleSpinBox" name="sbCLS_1">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="geometry">
+       <rect>
+        <x>90</x>
+        <y>20</y>
+        <width>62</width>
+        <height>22</height>
+       </rect>
+      </property>
+     </widget>
+     <widget class="QDoubleSpinBox" name="sbCLS_2">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="geometry">
+       <rect>
+        <x>90</x>
+        <y>50</y>
+        <width>62</width>
+        <height>22</height>
+       </rect>
+      </property>
+     </widget>
+    </widget>
+    <widget class="QGroupBox" name="groupBox_6">
+     <property name="geometry">
+      <rect>
+       <x>5</x>
+       <y>40</y>
+       <width>225</width>
+       <height>181</height>
+      </rect>
+     </property>
+     <property name="title">
+      <string>C &gt; S</string>
+     </property>
+     <widget class="QLabel" name="label_35">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>20</y>
+        <width>71</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Threshold 1</string>
+      </property>
+     </widget>
+     <widget class="QCheckBox" name="chkCGS_2">
+      <property name="geometry">
+       <rect>
+        <x>160</x>
+        <y>50</y>
+        <width>60</width>
+        <height>17</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Not Set</string>
+      </property>
+     </widget>
+     <widget class="QCheckBox" name="chkCGS_3">
+      <property name="geometry">
+       <rect>
+        <x>160</x>
+        <y>80</y>
+        <width>60</width>
+        <height>17</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Not Set</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_47">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>110</y>
+        <width>71</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Threshold 4</string>
+      </property>
+     </widget>
+     <widget class="QDoubleSpinBox" name="sbCGS_5">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="geometry">
+       <rect>
+        <x>90</x>
+        <y>140</y>
+        <width>62</width>
+        <height>22</height>
+       </rect>
+      </property>
+     </widget>
+     <widget class="QCheckBox" name="chkCGS_1">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="geometry">
+       <rect>
+        <x>160</x>
+        <y>20</y>
+        <width>60</width>
+        <height>17</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Not Set</string>
+      </property>
+     </widget>
+     <widget class="QCheckBox" name="chkCGS_4">
+      <property name="geometry">
+       <rect>
+        <x>160</x>
+        <y>110</y>
+        <width>60</width>
+        <height>17</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Not Set</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_48">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>140</y>
+        <width>71</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Threshold 5</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_36">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>80</y>
+        <width>71</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Threshold 3</string>
+      </property>
+     </widget>
+     <widget class="QDoubleSpinBox" name="sbCGS_3">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="geometry">
+       <rect>
+        <x>90</x>
+        <y>80</y>
+        <width>62</width>
+        <height>22</height>
+       </rect>
+      </property>
+     </widget>
+     <widget class="QCheckBox" name="chkCGS_5">
+      <property name="geometry">
+       <rect>
+        <x>160</x>
+        <y>140</y>
+        <width>60</width>
+        <height>17</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Not Set</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_37">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>50</y>
+        <width>71</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Threshold 2</string>
+      </property>
+     </widget>
+     <widget class="QDoubleSpinBox" name="sbCGS_4">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="geometry">
+       <rect>
+        <x>90</x>
+        <y>110</y>
+        <width>62</width>
+        <height>22</height>
+       </rect>
+      </property>
+     </widget>
+     <widget class="QDoubleSpinBox" name="sbCGS_1">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="geometry">
+       <rect>
+        <x>90</x>
+        <y>20</y>
+        <width>62</width>
+        <height>22</height>
+       </rect>
+      </property>
+     </widget>
+     <widget class="QDoubleSpinBox" name="sbCGS_2">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="geometry">
+       <rect>
+        <x>90</x>
+        <y>50</y>
+        <width>62</width>
+        <height>22</height>
+       </rect>
+      </property>
+     </widget>
+    </widget>
+    <widget class="QComboBox" name="cbSymbol_CS">
+     <property name="geometry">
+      <rect>
+       <x>90</x>
+       <y>10</y>
+       <width>70</width>
+       <height>22</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_42">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>14</y>
+       <width>47</width>
+       <height>13</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Symbol</string>
+     </property>
+    </widget>
+   </widget>
+  </widget>
+  <widget class="QPushButton" name="btnCancel">
+   <property name="geometry">
+    <rect>
+     <x>240</x>
+     <y>265</y>
+     <width>71</width>
+     <height>23</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Cancel</string>
+   </property>
   </widget>
  </widget>
  <resources/>

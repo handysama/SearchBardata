@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1052</width>
+    <width>1153</width>
     <height>680</height>
    </rect>
   </property>
@@ -19,7 +19,7 @@
      <rect>
       <x>0</x>
       <y>0</y>
-      <width>1082</width>
+      <width>1100</width>
       <height>660</height>
      </rect>
     </property>
@@ -39,7 +39,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1052</width>
+     <width>1153</width>
      <height>21</height>
     </rect>
    </property>
@@ -57,6 +57,7 @@
     <property name="title">
      <string>&amp;Option</string>
     </property>
+    <addaction name="actionChange_Threshold"/>
     <addaction name="actionUpdate_Database"/>
    </widget>
    <addaction name="menuFile"/>
@@ -69,7 +70,7 @@
   </action>
   <action name="actionThresholdParameters">
    <property name="text">
-    <string>Threshold Parameters</string>
+    <string>Threshold For Refresh Database</string>
    </property>
   </action>
   <action name="actionSync_with_TradeStation">
@@ -96,6 +97,14 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+S</string>
+   </property>
+  </action>
+  <action name="actionChange_Threshold">
+   <property name="text">
+    <string>Change Threshold For Search Condition</string>
+   </property>
+   <property name="shortcut">
+    <string>F2</string>
    </property>
   </action>
  </widget>

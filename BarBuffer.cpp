@@ -856,7 +856,7 @@ inline int BarBuffer::getSize() {
 
 int BarBuffer::maxReactResistance(const int &index, const double &b, const double &r, const int &scope, const int &threshold,
     QVariantList *v_value, QVariantList *v_date, QVariantList *v_time, QVariantList *v_rcount,
-    QVariantList *v_duration, QVector<QVariantList>* ReactList, QVariantList* LastDuration) {
+    QVariantList *v_duration, QVector<QVariantList>* ReactList, QVariantList* LastDuration, QVariantList* FirstDuration) {
   QVector<int> v_d;
   QVector<int> * Doutput = &v_d;
   QVector<int> v_n;
@@ -887,6 +887,7 @@ int BarBuffer::maxReactResistance(const int &index, const double &b, const doubl
       }
       ReactList->push_back(rd);
       LastDuration->append((*React_Date)[i].front()-index);
+      FirstDuration->append((*React_Date)[i].last()-index);
     }
 
     if ((*NumberOfHit)[i] > maxReact) {
@@ -898,7 +899,7 @@ int BarBuffer::maxReactResistance(const int &index, const double &b, const doubl
 
 int BarBuffer::maxReactSupport(const int &index, const double &b, const double &r, const int &scope, const int &threshold,
     QVariantList *v_value, QVariantList *v_date, QVariantList *v_time, QVariantList *v_rcount,
-    QVariantList *v_duration, QVector<QVariantList>* ReactList, QVariantList* LastDuration){
+    QVariantList *v_duration, QVector<QVariantList>* ReactList, QVariantList* LastDuration, QVariantList *FirstDuration){
   QVector<int> v_d;
   QVector<int> * Doutput = &v_d;
   QVector<int> v_n;
@@ -930,6 +931,7 @@ int BarBuffer::maxReactSupport(const int &index, const double &b, const double &
       }
       ReactList->push_back(rd);
       LastDuration->append((*React_Date)[i].front()-index);
+      FirstDuration->append((*React_Date)[i].last()-index);
     }
 
     if ((*NumberOfHit)[i] > maxReact) {
@@ -981,6 +983,7 @@ void BarBuffer::DBResistanceSupportGen(const QSqlDatabase &database, const doubl
   QVariantList res_duration;
   QVector<QVariantList> res_reactList;
   QVariantList res_LastDuration;
+  QVariantList res_FirstDuration;
   QVariantList sup_value;
   QVariantList sup_date;
   QVariantList sup_time;
@@ -988,6 +991,7 @@ void BarBuffer::DBResistanceSupportGen(const QSqlDatabase &database, const doubl
   QVariantList sup_duration;
   QVector<QVariantList> sup_reactList;
   QVariantList sup_LastDuration;
+  QVariantList sup_FirstDuration;
 //  int column_count_resistance = 0;
 //  int column_count_support = 0;
   int maxReact_support;
@@ -1000,9 +1004,9 @@ void BarBuffer::DBResistanceSupportGen(const QSqlDatabase &database, const doubl
 
   while (this->getSize() > 0) {
     maxReact_resistance = maxReactResistance(0, b, r, this->getSize(), threshold, &res_value, &res_date, &res_time,
-                                             &res_rcount, &res_duration, &res_reactList, &res_LastDuration);
+                                             &res_rcount, &res_duration, &res_reactList, &res_LastDuration, &res_FirstDuration);
     maxReact_support = maxReactSupport(0, b, r, this->getSize(), threshold, &sup_value, &sup_date, &sup_time,
-                                       &sup_rcount, &sup_duration, &sup_reactList, &sup_LastDuration);
+                                       &sup_rcount, &sup_duration, &sup_reactList, &sup_LastDuration, &sup_FirstDuration);
 
 //    rline.append(maxReact_resistance);
 //    sline.append(maxReact_support);
@@ -1010,7 +1014,8 @@ void BarBuffer::DBResistanceSupportGen(const QSqlDatabase &database, const doubl
 //    time_.append(time[0].toString("hh:mm"));
 
     // Resistance
-    insert_resistance_detail(&qInsert, date[0], time[0], res_date, res_time, res_value, res_rcount, res_duration, res_LastDuration, id_threshold);
+    insert_resistance_detail(&qInsert, date[0], time[0], res_date, res_time, res_value, res_rcount,
+                             res_duration, res_LastDuration, res_FirstDuration, id_threshold);
 
     query.exec("select max(rowid) from " + SQLiteHandler::TABLE_NAME_RESISTANCE);
     last_rowid = query.next()? query.value(0).toInt() : 0;
@@ -1018,7 +1023,8 @@ void BarBuffer::DBResistanceSupportGen(const QSqlDatabase &database, const doubl
     insert_resistance_react_date_detail(&qInsert, last_rowid, res_date, res_reactList);
 
     // Support
-    insert_support_detail(&qInsert, date[0], time[0], sup_date, sup_time, sup_value, sup_rcount, sup_duration, sup_LastDuration, id_threshold);
+    insert_support_detail(&qInsert, date[0], time[0], sup_date, sup_time, sup_value, sup_rcount,
+                          sup_duration, sup_LastDuration, sup_FirstDuration, id_threshold);
 
     query.exec("select max(rowid) from " + SQLiteHandler::TABLE_NAME_SUPPORT);
     last_rowid = query.next()? query.value(0).toInt() : 0;
@@ -1036,7 +1042,9 @@ void BarBuffer::DBResistanceSupportGen(const QSqlDatabase &database, const doubl
 //      sqlite_insert_resistance_wtf(&qInsert, column_count_resistance, date[0], time[0], res_value, threshold_index);
 //      sqlite_insert_support_wtf(&qInsert, column_count_support, date[0], time[0], sup_value, threshold_index);
 
+    //
     // release resource
+    //
     res_value.clear();
     res_date.clear();
     res_time.clear();
@@ -1044,6 +1052,7 @@ void BarBuffer::DBResistanceSupportGen(const QSqlDatabase &database, const doubl
     res_duration.clear();
     res_LastDuration.clear();
     res_reactList.clear();
+    res_FirstDuration.clear();
     sup_value.clear();
     sup_date.clear();
     sup_time.clear();
@@ -1051,6 +1060,7 @@ void BarBuffer::DBResistanceSupportGen(const QSqlDatabase &database, const doubl
     sup_duration.clear();
     sup_LastDuration.clear();
     sup_reactList.clear();
+    sup_FirstDuration.clear();
 
 //    if (date_.size() >= 100000) {
 //      sqlite_update_bardata_rline_sline(&qInsert, date_, time_, rline, sline, id_threshold);
@@ -1121,7 +1131,7 @@ void BarBuffer::DBResistanceSupportGen_Recalculate(const QSqlDatabase &database,
 void BarBuffer::insert_resistance_detail(QSqlQuery *query,
     const QDate &date_, const QTime &time_, const QVariantList &rdate, const QVariantList &rtime,
     const QVariantList &v_value, const QVariantList &v_rcount, const QVariantList &v_duration,
-    const QVariantList &v_last_duration, const int &id_threshold) {
+    const QVariantList &v_last_duration, const QVariantList &v_first_duration, const int &id_threshold) {
   QString s_date = date_.toString("yyyy-MM-dd");
   QString s_time = time_.toString("hh:mm");
   QVariantList v_date;
@@ -1144,6 +1154,7 @@ void BarBuffer::insert_resistance_detail(QSqlQuery *query,
   query->addBindValue(v_value);
   query->addBindValue(v_duration);
   query->addBindValue(v_last_duration);
+  query->addBindValue(v_first_duration);
   query->addBindValue(v_index); // id_threshold
   query->execBatch();
   if (query->lastError().isValid()) qDebug() << query->lastError();
@@ -1152,7 +1163,7 @@ void BarBuffer::insert_resistance_detail(QSqlQuery *query,
 void BarBuffer::insert_support_detail(QSqlQuery *query,
     const QDate &date_, const QTime &time_, const QVariantList &rdate, const QVariantList &rtime,
     const QVariantList &v_value, const QVariantList &v_rcount, const QVariantList &v_duration,
-    const QVariantList &v_last_duration, const int &id_threshold) {
+    const QVariantList &v_last_duration, const QVariantList &v_first_duration, const int &id_threshold) {
   QString s_date = date_.toString("yyyy-MM-dd");
   QString s_time = time_.toString("hh:mm");
   QVariantList v_date;
@@ -1175,6 +1186,7 @@ void BarBuffer::insert_support_detail(QSqlQuery *query,
   query->addBindValue(v_value);
   query->addBindValue(v_duration);
   query->addBindValue(v_last_duration);
+  query->addBindValue(v_first_duration);
   query->addBindValue(v_index); // id_threshold
   query->execBatch();
   if (query->lastError().isValid()) qDebug() << query->lastError();

@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1048</width>
+    <width>1145</width>
     <height>600</height>
    </rect>
   </property>
@@ -47,7 +47,7 @@
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>200</y>
+      <y>247</y>
       <width>75</width>
       <height>24</height>
      </rect>
@@ -61,8 +61,8 @@
      <rect>
       <x>10</x>
       <y>40</y>
-      <width>680</width>
-      <height>155</height>
+      <width>785</width>
+      <height>202</height>
      </rect>
     </property>
     <property name="font">
@@ -99,7 +99,7 @@
    <widget class="QGroupBox" name="groupBox">
     <property name="geometry">
      <rect>
-      <x>700</x>
+      <x>805</x>
       <y>27</y>
       <width>334</width>
       <height>152</height>
@@ -623,7 +623,7 @@
    <widget class="QCheckBox" name="chkPlotMatcher">
     <property name="geometry">
      <rect>
-      <x>580</x>
+      <x>680</x>
       <y>15</y>
       <width>105</width>
       <height>17</height>
@@ -643,37 +643,11 @@
      </rect>
     </property>
    </widget>
-   <widget class="QDoubleSpinBox" name="sbAvgThreshold">
-    <property name="geometry">
-     <rect>
-      <x>630</x>
-      <y>200</y>
-      <width>62</width>
-      <height>24</height>
-     </rect>
-    </property>
-    <property name="decimals">
-     <number>4</number>
-    </property>
-   </widget>
-   <widget class="QLabel" name="label_8">
-    <property name="geometry">
-     <rect>
-      <x>555</x>
-      <y>204</y>
-      <width>75</width>
-      <height>16</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Avg Threshold</string>
-    </property>
-   </widget>
    <widget class="QLabel" name="lblLastUpdate">
     <property name="geometry">
      <rect>
-      <x>791</x>
-      <y>6</y>
+      <x>890</x>
+      <y>9</y>
       <width>90</width>
       <height>16</height>
      </rect>
@@ -692,8 +666,8 @@
    <widget class="QLabel" name="label_7">
     <property name="geometry">
      <rect>
-      <x>710</x>
-      <y>4</y>
+      <x>809</x>
+      <y>8</y>
       <width>82</width>
       <height>16</height>
      </rect>
@@ -706,9 +680,9 @@
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>230</y>
-      <width>1030</width>
-      <height>318</height>
+      <y>277</y>
+      <width>1130</width>
+      <height>300</height>
      </rect>
     </property>
     <property name="tabShape">
@@ -732,7 +706,7 @@
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>1030</width>
+        <width>1130</width>
         <height>292</height>
        </rect>
       </property>
@@ -774,7 +748,7 @@
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>993</width>
+        <width>1130</width>
         <height>292</height>
        </rect>
       </property>
@@ -816,7 +790,7 @@
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>993</width>
+        <width>1130</width>
         <height>292</height>
        </rect>
       </property>
@@ -858,7 +832,7 @@
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>993</width>
+        <width>1130</width>
         <height>292</height>
        </rect>
       </property>
@@ -900,7 +874,7 @@
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>993</width>
+        <width>1130</width>
         <height>292</height>
        </rect>
       </property>
@@ -942,7 +916,7 @@
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>993</width>
+        <width>1130</width>
         <height>292</height>
        </rect>
       </property>
@@ -980,7 +954,7 @@
     <property name="geometry">
      <rect>
       <x>90</x>
-      <y>200</y>
+      <y>247</y>
       <width>75</width>
       <height>24</height>
      </rect>
@@ -993,7 +967,7 @@
     <property name="geometry">
      <rect>
       <x>170</x>
-      <y>200</y>
+      <y>247</y>
       <width>75</width>
       <height>24</height>
      </rect>
@@ -1005,7 +979,7 @@
    <widget class="QGroupBox" name="groupBox_2">
     <property name="geometry">
      <rect>
-      <x>700</x>
+      <x>805</x>
       <y>182</y>
       <width>334</width>
       <height>60</height>
@@ -1187,33 +1161,22 @@
      </property>
     </widget>
    </widget>
-  </widget>
-  <widget class="QToolBar" name="mainToolBar">
-   <attribute name="toolBarArea">
-    <enum>TopToolBarArea</enum>
-   </attribute>
-   <attribute name="toolBarBreak">
-    <bool>false</bool>
-   </attribute>
+   <zorder>tableWidget</zorder>
+   <zorder>btnRefresh</zorder>
+   <zorder>cbSymbol</zorder>
+   <zorder>btnSearch</zorder>
+   <zorder>groupBox</zorder>
+   <zorder>lblUpdateStatus</zorder>
+   <zorder>chkPlotMatcher</zorder>
+   <zorder>cbThreshold</zorder>
+   <zorder>lblLastUpdate</zorder>
+   <zorder>label_7</zorder>
+   <zorder>tabWidget</zorder>
+   <zorder>btnExport</zorder>
+   <zorder>btnClearResult</zorder>
+   <zorder>groupBox_2</zorder>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
-  <widget class="QMenuBar" name="menuBar">
-   <property name="geometry">
-    <rect>
-     <x>0</x>
-     <y>0</y>
-     <width>1048</width>
-     <height>21</height>
-    </rect>
-   </property>
-   <widget class="QMenu" name="menuMenu">
-    <property name="title">
-     <string>File</string>
-    </property>
-    <addaction name="actionThreshold_Parameters"/>
-   </widget>
-   <addaction name="menuMenu"/>
-  </widget>
   <action name="actionThreshold_Parameters">
    <property name="text">
     <string>Resistance &amp;&amp; Support Parameters</string>

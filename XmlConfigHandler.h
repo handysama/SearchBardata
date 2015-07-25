@@ -9,20 +9,30 @@
 
 class XmlConfigHandler {
   public:
-    typedef struct {
-      double threshold; // 2
-      double b;
-      double r;
-      int index; // id_threshold
-      bool recalculate;
-    } t_threshold;
-
+    // Support / Resistance
     typedef struct {
       int t_id;
+      QString symbol;
+      double test_point; // 2
+      double break_threshold;
+      double react_threshold;
+      bool recalculate;
+    } t_sr_threshold;
+
+    // MACD / RSI / SlowK / SlowD
+    typedef struct {
+      int t_id;
+      QString operator1;
+      QString operator2;
       double value1;
       double value2;
-      QString _operator;
     } t_threshold_1;
+
+    // CGF / CLF / CGS / CLS
+    typedef struct {
+      int t_id;
+      QString value; // allow to be null (not set)
+    } t_threshold_2;
 
   private:
     static XmlConfigHandler *_instance;
@@ -36,30 +46,37 @@ class XmlConfigHandler {
     QString result_dir;
     QStringList list_symbol;
     QStringList list_database;
-
-    int rsi_operator;
-    int rsi_lb;
-    int rst_max;
-
     QMap<int,QString> interval_weight;
     QMap<int,int> interval_threshold;
-    QMap<QString,QVector<t_threshold>> list_threshold;
+    QMap< QString, QVector<t_sr_threshold> > list_sr_threshold; // Symbol, Thresholds
+    QVector<t_threshold_1> t_rsi;
+    QVector<t_threshold_1> t_macd;
+    QVector<t_threshold_1> t_slowk;
+    QVector<t_threshold_1> t_slowd;
+    QMap< QString, QVector<t_threshold_2> > t_cgf; // Symbol, Thresholds
+    QMap< QString, QVector<t_threshold_2> > t_clf;
+    QMap< QString, QVector<t_threshold_2> > t_cgs;
+    QMap< QString, QVector<t_threshold_2> > t_cls;
     QDateTime last_update;
-    bool enable_parent_indexing;
     bool enable_developer_mode;
-    bool enable_test_point_update;
-    bool enable_distfc_distsc_rank;
-    bool enable_distfs_rank;
+    bool enable_parent_indexing;
+    bool enable_update_support_resistance;
+    bool enable_update_histogram;
 
     XmlConfigHandler(){}
     XmlConfigHandler(XmlConfigHandler const&){}
     XmlConfigHandler& operator=(XmlConfigHandler const&){return *this;}
 
-    void init_config_variable();
+    void initialize_variable();
     void xml_parse_database(QXmlStreamReader &xml);
     void xml_parse_interval(QXmlStreamReader &xml);
     void xml_parse_threshold(QXmlStreamReader &xml);
     void xml_parse_element(QXmlStreamReader &xml, const QString &name, QStringList *out);
+    void xml_parse_macd(QXmlStreamReader &xml);
+    void xml_parse_rsi(QXmlStreamReader &xml);
+    void xml_parse_slowk(QXmlStreamReader &xml);
+    void xml_parse_slowd(QXmlStreamReader &xml);
+    void xml_parse_close_fs(QXmlStreamReader &xml, const QString &symbol, const QString &column_name); // CGF, CLF, CGS, CLS
     void read_config();
     void write_config_default();
 
@@ -107,9 +124,60 @@ class XmlConfigHandler {
       return interval_threshold;
     }
 
-    QMap<QString,QVector<t_threshold>> get_list_threshold() const {
-      return list_threshold;
+    QMap<QString,QVector<t_sr_threshold>> get_list_threshold() const {
+      return list_sr_threshold;
     }
+
+    QVector<t_threshold_1> get_macd_threshold() const {
+      return t_macd;
+    }
+
+    QVector<t_threshold_1> get_rsi_threshold() const {
+      return t_rsi;
+    }
+
+    QVector<t_threshold_1> get_slowk_threshold() const {
+      return t_slowk;
+    }
+
+    QVector<t_threshold_1> get_slowd_threshold() const {
+      return t_slowd;
+    }
+
+    QVector<t_threshold_2> get_cgf_threshold(const QString &symbol) const {
+      return t_cgf[symbol];
+    }
+
+    QVector<t_threshold_2> get_clf_threshold(const QString &symbol) const {
+      return t_clf[symbol];
+    }
+
+    QVector<t_threshold_2> get_cgs_threshold(const QString &symbol) const {
+      return t_cgs[symbol];
+    }
+
+    QVector<t_threshold_2> get_cls_threshold(const QString &symbol) const {
+      return t_cls[symbol];
+    }
+
+
+    QMap<QString,QVector<t_threshold_2>> get_cgf_threshold(void) const {
+      return t_cgf;
+    }
+
+    QMap<QString,QVector<t_threshold_2>> get_clf_threshold(void) const {
+      return t_clf;
+    }
+
+    QMap<QString,QVector<t_threshold_2>> get_cgs_threshold(void) const {
+      return t_cgs;
+    }
+
+    QMap<QString,QVector<t_threshold_2>> get_cls_threshold(void) const {
+      return t_cls;
+    }
+
+
 
     bool is_enable_developer_mode() const {
       return enable_developer_mode;
@@ -119,16 +187,12 @@ class XmlConfigHandler {
       return enable_parent_indexing;
     }
 
-    bool is_enable_test_point_update() const {
-      return enable_test_point_update;
+    bool is_enable_update_support_resistance() const {
+      return enable_update_support_resistance;
     }
 
-    bool is_enable_distf_dists_rank() const {
-      return enable_distfc_distsc_rank;
-    }
-
-    bool is_enable_distfs_rank() const {
-      return enable_distfs_rank;
+    bool is_enable_update_histogram() const {
+      return enable_update_histogram;
     }
 
     void set_last_updated(const QDateTime &value) {
@@ -151,12 +215,44 @@ class XmlConfigHandler {
       list_symbol = symbols;
     }
 
-    void set_list_threshold(const QMap<QString,QVector<t_threshold>> &threshold) {
-      list_threshold = threshold;
+    void set_list_threshold(const QMap<QString,QVector<t_sr_threshold>> &threshold) {
+      list_sr_threshold = threshold;
     }
 
     void set_interval_threshold(const QMap<int,int> &threshold) {
       interval_threshold = threshold;
+    }
+
+    void set_macd_threshold(const QVector<t_threshold_1> &t) {
+      t_macd = t;
+    }
+
+    void set_rsi_threshold(const QVector<t_threshold_1> &t) {
+      t_rsi = t;
+    }
+
+    void set_slowk_threshold(const QVector<t_threshold_1> &t) {
+      t_slowk = t;
+    }
+
+    void set_slowd_threshold(const QVector<t_threshold_1> &t) {
+      t_slowd = t;
+    }
+
+    void set_cgf_threshold(const QString &symbol, const QVector<t_threshold_2> &t) {
+      t_cgf[symbol] = t;
+    }
+
+    void set_clf_threshold(const QString &symbol, const QVector<t_threshold_2> &t) {
+      t_clf[symbol] = t;
+    }
+
+    void set_cgs_threshold(const QString &symbol, const QVector<t_threshold_2> &t) {
+      t_cgs[symbol] = t;
+    }
+
+    void set_cls_threshold(const QString &symbol, const QVector<t_threshold_2> &t) {
+      t_cls[symbol] = t;
     }
 };
 

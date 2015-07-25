@@ -1,6 +1,3 @@
-/**
- * MySqlConnector
- */
 #ifndef MYSQLCONN_H
 #define MYSQLCONN_H
 
@@ -12,32 +9,35 @@
 
 class MySqlConnector {
   private:
-    // configuration should be flexible in future
-    // for development purpose, we hard-coded these parameters
-    const QString connectionName = "2015.finance.project";
-    const QString databaseName = "finance";
+    // parameters for database connection
+    const QString connectionName = "sbar2015";
+    const QString databaseName = "test";
     const QString hostName = "localhost";
     const QString userName = "root";
-    const QString password = "root";
-    const static int port = 3306;
+    const QString password = "";
+    const static int port = 3308;
     QSqlDatabase db = QSqlDatabase::addDatabase("QMYSQL", connectionName);
 
   public:
-    MySqlConnector() {}
-    ~MySqlConnector() { closeDb(); }
+    MySqlConnector() {
+    }
 
-    bool connectDb() {
-      if (db.isOpen()) return true;
-      db.setDatabaseName(databaseName);
-      db.setHostName(hostName);
-      db.setPort(port);
-      db.setUserName(userName);
-      db.setPassword(password);
+    ~MySqlConnector() {
+      closeDatabase();
+    }
+
+    bool connectDatabase() {
+      if ( db.isOpen() ) return true;
+      db.setDatabaseName( databaseName );
+      db.setHostName( hostName );
+      db.setPort( port );
+      db.setUserName( userName );
+      db.setPassword( password );
       return db.open();
     }
 
-    void closeDb() {
-      if (db.isOpen()) {
+    void closeDatabase() {
+      if ( db.isOpen() ) {
         QString conn = db.connectionName();
         db.close();
         db = QSqlDatabase();
@@ -51,7 +51,7 @@ class MySqlConnector {
 
     QStringList getColumnNames(QString tableName) {
       QStringList res;
-      if (db.isOpen()) {
+      if ( db.isOpen() ) {
         QSqlRecord rec = db.record(tableName);
         int N = rec.count();
         for (int i = 0; i < N; ++i) {

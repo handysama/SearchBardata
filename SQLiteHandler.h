@@ -74,6 +74,8 @@ class SQLiteHandler {
     static const QString COLUMN_NAME_SLOWD;
     static const QString COLUMN_NAME_FASTAVG;
     static const QString COLUMN_NAME_SLOWAVG;
+    static const QString COLUMN_NAME_DAY10;
+    static const QString COLUMN_NAME_DAY50;
     static const QString COLUMN_NAME_FASTAVG_SLOPE;
     static const QString COLUMN_NAME_SLOWAVG_SLOPE;
     static const QString COLUMN_NAME_FCROSS;
@@ -94,30 +96,42 @@ class SQLiteHandler {
     static const QString COLUMN_NAME_DISTFS_RANK;
     static const QString COLUMN_NAME_N_DISTFS;
     static const QString COLUMN_NAME_DISTCC_FSCROSS;
+    static const QString COLUMN_NAME_DISTCC_FSCROSS_ATR;
     static const QString COLUMN_NAME_DISTCC_FSCROSS_RANK;
     static const QString COLUMN_NAME_ATR;
     static const QString COLUMN_NAME_ATR_RANK;
+    static const QString COLUMN_NAME_PREV_DAILY_ATR;
     static const QString COLUMN_NAME_OPENBAR;
     static const QString COLUMN_NAME_PREV_DATE;
     static const QString COLUMN_NAME_PREV_TIME;
     static const QString COLUMN_NAME_PREV_BARCOLOR;
-    static const QString COLUMN_NAME_MACD_G0;
-    static const QString COLUMN_NAME_MACD_L0;
-    static const QString COLUMN_NAME_RSI_G70;
-    static const QString COLUMN_NAME_RSI_L30;
-    static const QString COLUMN_NAME_SLOWK_G80;
-    static const QString COLUMN_NAME_SLOWK_L20;
-    static const QString COLUMN_NAME_SLOWD_G80;
-    static const QString COLUMN_NAME_SLOWD_L20;
+//    static const QString COLUMN_NAME_MACD_G0;
+//    static const QString COLUMN_NAME_MACD_L0;
+//    static const QString COLUMN_NAME_MACD_G0_RANK;
+//    static const QString COLUMN_NAME_MACD_L0_RANK;
+//    static const QString COLUMN_NAME_RSI_G70;
+//    static const QString COLUMN_NAME_RSI_L30;
+//    static const QString COLUMN_NAME_SLOWK_G80;
+//    static const QString COLUMN_NAME_SLOWK_L20;
+//    static const QString COLUMN_NAME_SLOWD_G80;
+//    static const QString COLUMN_NAME_SLOWD_L20;
     static const QString COLUMN_NAME_MACD_RANK;
-    static const QString COLUMN_NAME_MACD_G0_RANK;
-    static const QString COLUMN_NAME_MACD_L0_RANK;
-//    static const QString COLUMN_NAME_RSI_G70_RANK;
-//    static const QString COLUMN_NAME_RSI_L30_RANK;
-//    static const QString COLUMN_NAME_SLOWK_G80_RANK;
-//    static const QString COLUMN_NAME_SLOWK_L20_RANK;
-//    static const QString COLUMN_NAME_SLOWD_G80_RANK;
-//    static const QString COLUMN_NAME_SLOWD_L20_RANK;
+    static const QString COLUMN_NAME_MACD_VALUE1;
+    static const QString COLUMN_NAME_MACD_VALUE2;
+    static const QString COLUMN_NAME_MACD_RANK1;
+    static const QString COLUMN_NAME_MACD_RANK2;
+    static const QString COLUMN_NAME_RSI_VALUE1;
+    static const QString COLUMN_NAME_RSI_VALUE2;
+    static const QString COLUMN_NAME_RSI_RANK1;
+    static const QString COLUMN_NAME_RSI_RANK2;
+    static const QString COLUMN_NAME_SLOWK_VALUE1;
+    static const QString COLUMN_NAME_SLOWK_VALUE2;
+    static const QString COLUMN_NAME_SLOWK_RANK1;
+    static const QString COLUMN_NAME_SLOWK_RANK2;
+    static const QString COLUMN_NAME_SLOWD_VALUE1;
+    static const QString COLUMN_NAME_SLOWD_VALUE2;
+    static const QString COLUMN_NAME_SLOWD_RANK1;
+    static const QString COLUMN_NAME_SLOWD_RANK2;
     static const QString COLUMN_NAME_CANDLE_UPTAIL;
     static const QString COLUMN_NAME_CANDLE_DOWNTAIL;
     static const QString COLUMN_NAME_CANDLE_BODY;
@@ -146,6 +160,26 @@ class SQLiteHandler {
     static const QString COLUMN_NAME_ZONE_DAILY;
     static const QString COLUMN_NAME_ZONE_WEEKLY;
     static const QString COLUMN_NAME_ZONE_MONTHLY;
+    static const QString COLUMN_NAME_OPEN_ZONE;
+    static const QString COLUMN_NAME_OPEN_ZONE_60MIN;
+    static const QString COLUMN_NAME_OPEN_ZONE_DAILY;
+    static const QString COLUMN_NAME_OPEN_ZONE_WEEKLY;
+    static const QString COLUMN_NAME_OPEN_ZONE_MONTHLY;
+    static const QString COLUMN_NAME_HIGH_ZONE;
+    static const QString COLUMN_NAME_HIGH_ZONE_60MIN;
+    static const QString COLUMN_NAME_HIGH_ZONE_DAILY;
+    static const QString COLUMN_NAME_HIGH_ZONE_WEEKLY;
+    static const QString COLUMN_NAME_HIGH_ZONE_MONTHLY;
+    static const QString COLUMN_NAME_LOW_ZONE;
+    static const QString COLUMN_NAME_LOW_ZONE_60MIN;
+    static const QString COLUMN_NAME_LOW_ZONE_DAILY;
+    static const QString COLUMN_NAME_LOW_ZONE_WEEKLY;
+    static const QString COLUMN_NAME_LOW_ZONE_MONTHLY;
+    static const QString COLUMN_NAME_CLOSE_ZONE;
+    static const QString COLUMN_NAME_CLOSE_ZONE_60MIN;
+    static const QString COLUMN_NAME_CLOSE_ZONE_DAILY;
+    static const QString COLUMN_NAME_CLOSE_ZONE_WEEKLY;
+    static const QString COLUMN_NAME_CLOSE_ZONE_MONTHLY;
     static const QString COLUMN_NAME_DISTOF;
     static const QString COLUMN_NAME_DISTOS;
     static const QString COLUMN_NAME_N_DISTOF;
@@ -173,27 +207,12 @@ class SQLiteHandler {
     static const QString COLUMN_NAME_DISTSUP;
     static const QString COLUMN_NAME_DISTSUP_ATR;
     static const QString COLUMN_NAME_DISTSUP_RANK;
-    // Generic column
     static const QString COLUMN_NAME_DAILY_RLINE;
-    static const QString COLUMN_NAME_DAILY_RLINE_F;
-    static const QString COLUMN_NAME_DAILY_RLINE_S;
     static const QString COLUMN_NAME_DAILY_SLINE;
-    static const QString COLUMN_NAME_DAILY_SLINE_F;
-    static const QString COLUMN_NAME_DAILY_SLINE_S;
-    // Generic column
     static const QString COLUMN_NAME_WEEKLY_RLINE;
-    static const QString COLUMN_NAME_WEEKLY_RLINE_F;
-    static const QString COLUMN_NAME_WEEKLY_RLINE_S;
     static const QString COLUMN_NAME_WEEKLY_SLINE;
-    static const QString COLUMN_NAME_WEEKLY_SLINE_F;
-    static const QString COLUMN_NAME_WEEKLY_SLINE_S;
-    // Generic column
     static const QString COLUMN_NAME_MONTHLY_RLINE;
-    static const QString COLUMN_NAME_MONTHLY_RLINE_F;
-    static const QString COLUMN_NAME_MONTHLY_RLINE_S;
     static const QString COLUMN_NAME_MONTHLY_SLINE;
-    static const QString COLUMN_NAME_MONTHLY_SLINE_F;
-    static const QString COLUMN_NAME_MONTHLY_SLINE_S;
     // Resistance/Support
     static const QString COLUMN_NAME_DIST_POINT;
     static const QString COLUMN_NAME_DIST_ATR;
@@ -378,7 +397,6 @@ class SQLiteHandler {
       return database;
     }
 
-    // TODO : will be removed in next version
     static void removeCloneDatabase(QSqlDatabase *database) {
       SQLiteHandler::removeDatabase(database);
     }
@@ -407,7 +425,7 @@ class SQLiteHandler {
     }
 
     const QSqlDatabase getTempResultDatabase(const IntervalWeight &interval, const int &id) const {
-      QString database_path = this->database_path + "/" + getTempResultDatabaseName(interval, id);
+      QString local_database_path = database_path + "/" + getTempResultDatabaseName(interval, id);
       QString connectionString = create_tempdb_connection_string(interval, id);
 
 //      if (tempDatabasePool.contains(connectionString)) {
@@ -434,7 +452,7 @@ class SQLiteHandler {
       }
 
       QSqlDatabase db = QSqlDatabase::addDatabase("QSQLITE", connectionString);
-      db.setDatabaseName(database_path);
+      db.setDatabaseName(local_database_path);
       db.open();
       return db;
     }
@@ -474,18 +492,21 @@ class SQLiteHandler {
     }
 
     const QSqlDatabase& getDatabase(const QString &databaseName) {
-      if (!databasePool.contains(databaseName) || databasePool[databaseName]->isOpenError()) {
-        // Create new connection name
-        QString connection = connectionName + databaseName + QString::number(application_id);
-        QString database_path = this->database_path + "/" + databaseName;
+      if (!databasePool.contains(databaseName) ) { // || !databasePool[databaseName]->isOpen()
 
+        //
         // Create new database object
+        //
+        QString connection = connectionName + databaseName + QString::number(application_id);
+        QString database_name = database_path + "/" + databaseName;
         QSqlDatabase *db = new QSqlDatabase();
         *db = QSqlDatabase::addDatabase("QSQLITE", connection);
-        db->setDatabaseName(database_path);
+        db->setDatabaseName(database_name);
         db->open();
 
-        // Create table & index
+        //
+        // Create table
+        //
         QSqlQuery query(*db);
         QString page_size;
         if (databaseName.contains("Monthly")) {
@@ -504,7 +525,9 @@ class SQLiteHandler {
         query.exec(SQL_CREATE_TABLE_RESISTANCE_DATE_V1);
         query.exec(SQL_CREATE_TABLE_SUPPORT_DATE_V1);
 
+        //
         // Create index
+        //
         query.exec(SQL_CREATE_INDEX_BARDATA_PARENT);
         query.exec(SQL_CREATE_INDEX_BARDATA_PARENT_PREV);
         query.exec(SQL_CREATE_INDEX_BARDATA_PARENT_MONTHLY);
@@ -1042,7 +1065,7 @@ class SQLiteHandler {
 //          " order by C desc limit 1";
 //      }
 
-      qDebug() << "\nMaxColumn Resistance" << sql_count_maxcolumn;
+//      qDebug() << "\nMaxColumn Resistance" << sql_count_maxcolumn;
       query->exec(sql_count_maxcolumn);
       if (query->lastError().isValid()) qDebug() << query->lastError();
       max_column = query->next()? query->value(0).toInt() : 0;
@@ -1121,24 +1144,24 @@ class SQLiteHandler {
       if (parent_database != "") {
         sql_select_detail =
             "select date_,time_,group_concat(resistance),group_concat(resistance_count),group_concat(resistance_duration) from"
-            "(select a.date_,a.time_,resistance,resistance_count,resistance_duration from " + tempDatabaseAlias + "." + tempTableName + " a " + left_join_clause +
+            "(select a.date_,a.time_,b.resistance,b.resistance_count,b.resistance_duration from " + tempDatabaseAlias + "." + tempTableName + " a " + left_join_clause +
             " join " + parent_database + resistance_table + " b on b.date_=" + child_alias + ".date_ and b.time_=" + child_alias + ".time_" +
             " where delete_flag=0 and id_threshold=" + QString::number(id_threshold) + " and " +
              "(b.resistance-" + r + ")<=CAST(a.high_ as Real) and " +
             "((b.resistance+" + r + ")>=CAST(a.open_ as Real) or " +
              "(b.resistance+" + r + ")>=CAST(a.close_ as Real))" +
-            " order by resistance desc)"
+            " order by b.resistance desc)"
             " group by date_,time_";
       } else {
         sql_select_detail =
             "select date_,time_,group_concat(resistance),group_concat(resistance_count),group_concat(resistance_duration) from"
-            "(select a.date_,a.time_,resistance,resistance_count,resistance_duration from " + tempDatabaseAlias + "." + tempTableName + " a " + left_join_clause +
+            "(select a.date_,a.time_,b.resistance,b.resistance_count,b.resistance_duration from " + tempDatabaseAlias + "." + tempTableName + " a " + left_join_clause +
             " join " + parent_database + resistance_table + " b on b.date_=" + child_alias + ".PrevDate and b.time_=" + child_alias + ".PrevTime" +
             " where delete_flag=0 and id_threshold=" + QString::number(id_threshold) + " and " +
              "(b.resistance-" + r + ")<=CAST(a.high_ as Real) and " +
             "((b.resistance+" + r + ")>=CAST(a.open_ as Real) or " +
              "(b.resistance+" + r + ")>=CAST(a.close_ as Real))" +
-            " order by resistance desc)"
+            " order by b.resistance desc)"
             " group by date_,time_";
       }
 
@@ -1167,24 +1190,26 @@ class SQLiteHandler {
       if (parent_database != "") {
         sql_select_detail =
           "select date_,time_,group_concat(support),group_concat(support_count),group_concat(support_duration) from"
-          "(select a.rowid, a.date_,a.time_,support,support_count,support_duration from " + tempDatabaseAlias + "." + tempTableName + " a " + left_join_clause +
+          "(select a.rowid, a.date_,a.time_,b.support,b.support_count,b.support_duration"
+          " from " + tempDatabaseAlias + "." + tempTableName + " a " + left_join_clause +
           " join " + parent_database + support_table + " b on b.date_=" + child_alias + ".date_ and b.time_=" + child_alias + ".time_" +
           " where delete_flag=0 and id_threshold=" + QString::number(id_threshold) + " and " +
            "(b.support+" + r + ")>=CAST(a.low_ as Real) and "
           "((b.support-" + r + ")<=CAST(a.open_ as Real) or " +
            "(b.support-" + r + ")<=CAST(a.close_ as Real))" +
-          " order by support desc)"
+          " order by b.support desc)"
           " group by date_,time_";
       } else {
         sql_select_detail =
           "select date_,time_,group_concat(support),group_concat(support_count),group_concat(support_duration) from"
-          "(select a.rowid, a.date_,a.time_,support,support_count,support_duration from " + tempDatabaseAlias + "." + tempTableName + " a " + left_join_clause +
+          "(select a.rowid, a.date_,a.time_,b.support,b.support_count,b.support_duration"
+          " from " + tempDatabaseAlias + "." + tempTableName + " a " + left_join_clause +
           " join " + parent_database + support_table + " b on b.date_=" + child_alias + ".PrevDate and b.time_=" + child_alias + ".PrevTime" +
           " where delete_flag=0 and id_threshold=" + QString::number(id_threshold) + " and " +
            "(b.support+" + r + ")>=CAST(a.low_ as Real) and " +
           "((b.support-" + r + ")<=CAST(a.open_ as Real) or " +
            "(b.support-" + r + ")<=CAST(a.close_ as Real))" +
-          " order by support desc)"
+          " order by b.support desc)"
           " group by date_,time_";
       }
 
@@ -1294,6 +1319,21 @@ class SQLiteHandler {
       query->exec(sql);
       return query;
     }
+
+
+    /*void extendLookAheadBars(QSqlDatabase &database, int lookAheadBars) {
+      QSqlQuery query(database);
+      QString sql_select =
+        "select a.rowid, b.open_, b.high_, b.low_, b.close_,"
+        " case when a.close_>b.close then 1 else 0 end,"
+        " case when a.close_<b.close_"
+        " from bardata a"
+        " join bardata b on (a.rowid >= b.rowid and a.rowid <= b.rowid+" + QString::number(lookAheadBars) + ")";
+
+
+      query.setForwardOnly(true);
+      query.exec(sql_select);
+    }*/
 
 
   private:

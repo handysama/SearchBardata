@@ -31,6 +31,7 @@ typedef struct {
   double dists;
   double distfs;
   double atr;
+  double prev_atr;
   int fgs; // F > S
   int fls; // F < S
   int cgf; // C > F

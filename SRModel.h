@@ -38,6 +38,7 @@ class SRModel : public QSqlTableModel {
 
         if (column_name.endsWith(QString::number(FASTAVG_LENGTH))) { fastavg_column.append(i); }
         else if (column_name.endsWith(QString::number(SLOWAVG_LENGTH))) { slowavg_column.append(i); }
+        else if (column_name == "Dist(FS-Cross)") dist_fscross_column = i;
         else {
           // Resistance & Support
           if (SRstart < 0) {
@@ -58,20 +59,21 @@ class SRModel : public QSqlTableModel {
         int column = index.column();
         QString column_name = headerData(column, Qt::Horizontal).toString();
 
-        open = record(index.row()).value(OPEN_COLUMN).toDouble();
-        high = record(index.row()).value(HIGH_COLUMN).toDouble();
-        low = record(index.row()).value(LOW_COLUMN).toDouble();
-        close = record(index.row()).value(CLOSE_COLUMN).toDouble();
+        open = record(index.row()).value( OPEN_COLUMN ).toDouble();
+        high = record(index.row()).value( HIGH_COLUMN ).toDouble();
+        low = record(index.row()).value( LOW_COLUMN ).toDouble();
+        close = record(index.row()).value( CLOSE_COLUMN ).toDouble();
         fastavg = record(index.row()).value( fastavg_column.first() ).toDouble();
         slowavg = record(index.row()).value( slowavg_column.first() ).toDouble();
 
-        if (column == CLOSE_COLUMN) {
+
+        if ( column == CLOSE_COLUMN ) {
           if (open < close) return QColor(54,186,0);
           if (open > close) return QColor(Qt::red);
           return QSqlQueryModel::data(index, role);
         }
         else if (column_name.startsWith("MACD (R)")) {
-          if (record(index.row()).value(MACD_COLUMN).toDouble() < 0) return QColor(Qt::blue);
+          if (record(index.row()).value( MACD_COLUMN ).toDouble() < 0) return QColor(Qt::blue);
         }
         else if (column_name.endsWith("-10") || column_name.endsWith("-50")) {
           fastavg_slowavg = record(index.row()).value(column).toDouble();
@@ -87,6 +89,10 @@ class SRModel : public QSqlTableModel {
           else if (column_name.startsWith("Dist(H-S)") && high - slowavg < 0) return QColor(Qt::blue);
           else if (column_name.startsWith("Dist(L-F)") && low - fastavg < 0) return QColor(Qt::blue);
           else if (column_name.startsWith("Dist(L-S)") && low - slowavg < 0) return QColor(Qt::blue);
+          else if (column_name.startsWith("Dist(FS-Cross)")) {
+            if (record(index.row()).value( dist_fscross_column ).toDouble() < 0)
+              return QColor(Qt::blue);
+          }
         }
         else if (SRstart > -1 && column >= SRstart) {
           return QColor(Qt::red);
@@ -112,6 +118,8 @@ class SRModel : public QSqlTableModel {
     }
 
   private:
+    QVector<int> fastavg_column;
+    QVector<int> slowavg_column;
     mutable double open;
     mutable double high;
     mutable double low;
@@ -122,11 +130,11 @@ class SRModel : public QSqlTableModel {
     mutable double sr_minus_threshold;
     mutable double sr_plus_threshold;
     mutable double fastavg_slowavg;
+    mutable double dist_fscross;
     double threshold;
     int SRstart;
+    int dist_fscross_column;
     bool disable_text_color;
-    QVector<int> fastavg_column;
-    QVector<int> slowavg_column;
 };
 
 #endif // SRMODEL_H

@@ -3,8 +3,6 @@
 
 MainWindow::MainWindow(const int &id, QWidget *parent):QMainWindow(parent),ui(new Ui::MainWindow) {
   ui->setupUi(this);
-  ui->mainToolBar->hide();
-  ui->menuBar->hide();
   ui->btnRefresh->setAutoRepeat(false);
   ui->btnSearch->setAutoRepeat(false);
   ui->lblUpdateStatus->setText("");
@@ -19,6 +17,14 @@ MainWindow::MainWindow(const int &id, QWidget *parent):QMainWindow(parent),ui(ne
   SBAR_ID = id;
   enable_sync_result = true;
   sqlitedb.set_application_id(SBAR_ID);
+  tid_macd = 1;
+  tid_rsi = 1;
+  tid_slowk = 1;
+  tid_slowd = 1;
+  tid_cgf = 0;
+  tid_clf = 0;
+  tid_cgs = 0;
+  tid_cls = 0;
 
   // table widget for search condition
   filter = new FilterOptionFactory(ui->tableWidget);
@@ -30,7 +36,7 @@ MainWindow::MainWindow(const int &id, QWidget *parent):QMainWindow(parent),ui(ne
   on_tabWidget_currentChanged(0);
 
   QPalette pal = ui->btnSearch->palette();
-  switch (id) {
+  switch ( id ) {
     case 0: pal.setColor(QPalette::Button, QColor(Qt::yellow)); break;
     case 1: pal.setColor(QPalette::Button, QColor(Qt::cyan)); break;
     case 2: pal.setColor(QPalette::Button, QColor(Qt::green)); break;
@@ -44,44 +50,58 @@ MainWindow::MainWindow(const int &id, QWidget *parent):QMainWindow(parent),ui(ne
   ui->btnSearch->update();
 
   // status bar
-  ui->statusBar->addPermanentWidget(&label_query_result,100);
-  ui->statusBar->addPermanentWidget(&label_tab_id);
-  label_tab_id.setText("Tab # " + QString::number(SBAR_ID+1));
+  ui->statusBar->addPermanentWidget(&label_query_result, 100);
+  ui->statusBar->addPermanentWidget(&label_threshold_params);
+//  ui->statusBar->addPermanentWidget(&label_tab_id);
+
+  label_tab_id.setText("Tab # " + QString::number(SBAR_ID + 1));
+  label_threshold_params.setText("(MACD: 0/0), (RSI: 30/70), (SlowK: 20/80), (SlowD: 20/80)");
 
   // thread pool
   thread_pool->setMaxThreadCount(QThread::idealThreadCount());
   thread_pool->setExpiryTimeout(300000);
+
+//  MySqlConnector my;
+//  qDebug() << "mysqlcon" << my.connectDatabase();
+//  qDebug() << my.getColumnNames("dummy");
+
+//  DailySupport ds;
+//  QVector<QDate> m_date;
+//  QVector<QTime> m_time;
+//  QVector<double> m_low;
+//  ds.prepare_data( sqlitedb.getDatabase( SQLiteHandler::getDatabaseName("@NQ", WEIGHT_DAILY)) );
+//  qDebug() << "\n\n## --- Calculate";
+//  // 0 : 2015-07-08
+//  // 10 : 2015-06-23
+//  ds.calculate_daily_support(&m_date, &m_time, &m_low, 0, 250, 2, 2, 2);
 }
 
 MainWindow::~MainWindow() {
   thread_pool->clear();
   delete filter;
-
   delete srmodel;
   delete srmodel_monthly;
   delete srmodel_weekly;
   delete srmodel_daily;
   delete srmodel_60min;
   delete srmodel_5min;
-
   delete model_query;
   delete model_query_daily;
   delete model_query_weekly;
   delete model_query_monthly;
   delete model_query_60min;
   delete model_query_5min;
-
   SQLiteHandler::removeDatabase(&model_database);
   delete ui;
 }
 
 void MainWindow::resizeEvent(QResizeEvent *e) {
-  int t_width = ui->centralWidget->width()-19;
-  int t_height = ui->centralWidget->height()-232;
-  ui->tabWidget->setGeometry(10, 230, t_width, t_height);
+  int t_width = ui->centralWidget->width() - 19;
+  int t_height = ui->centralWidget->height() - 277;
+  ui->tabWidget->setGeometry(10, 277, t_width, t_height);
 
-  t_width = ui->tabWidget->width()-5;
-  t_height = ui->tabWidget->height()-25;
+  t_width = ui->tabWidget->width() - 5;
+  t_height = ui->tabWidget->height() - 25;
   ui->tblData->setGeometry(0, 0, t_width, t_height);
   ui->tblData_60min->setGeometry(0, 0, t_width, t_height);
   ui->tblData_Daily->setGeometry(0, 0, t_width, t_height);
@@ -102,10 +122,17 @@ void MainWindow::initialize(bool update_interface = true) {
   list_interval_weight = config->get_interval_weight();
   list_interval_threshold = config->get_interval_threshold();
   enable_parent_indexing = config->is_enable_parent_indexing();
-  enable_test_point_update = config->is_enable_test_point_update();
-  enable_distf_dists_rank = config->is_enable_distf_dists_rank();
-  enable_distfs_rank = config->is_enable_distfs_rank();
+  enable_update_support_resistance = config->is_enable_update_support_resistance();
+  enable_update_histogram = config->is_enable_update_histogram();
   enable_developer_mode = config->is_enable_developer_mode();
+  t_macd = config->get_macd_threshold();
+  t_rsi = config->get_rsi_threshold();
+  t_slowk = config->get_slowk_threshold();
+  t_slowd = config->get_slowd_threshold();
+  t_cgf = config->get_cgf_threshold();
+  t_clf = config->get_clf_threshold();
+  t_cgs = config->get_cgs_threshold();
+  t_cls = config->get_cls_threshold();
 
   // set database path
   sqlitedb.set_database_path(database_dir);
@@ -140,18 +167,6 @@ void MainWindow::on_cbSymbol_currentIndexChanged(const int &index) {
   set_data_range_label();
   set_threshold_parameters(ui->cbSymbol->itemData(index).toString());
   on_tabWidget_currentChanged(0);
-}
-
-void MainWindow::on_btnClearResult_clicked() {
-  QStringList nameFilter("*." + QString::number(SBAR_ID) + ".sbar");
-  QDir dir = result_dir;
-  QStringList files = dir.entryList(nameFilter);
-
-  for (int i = 0; i < files.size(); ++i) {
-    QFile::remove(result_dir + "/" + files[i]);
-  }
-
-  clear_model();
 }
 
 void MainWindow::on_tabWidget_currentChanged(const int &index) {
@@ -249,6 +264,18 @@ void MainWindow::on_tabWidget_currentChanged(const int &index) {
   }
 }
 
+void MainWindow::on_btnClearResult_clicked() {
+  QStringList nameFilter("*." + QString::number(SBAR_ID) + ".sbar");
+  QDir dir = result_dir;
+  QStringList files = dir.entryList(nameFilter);
+
+  for (int i = 0; i < files.size(); ++i) {
+    QFile::remove(result_dir + "/" + files[i]);
+  }
+
+  clear_model();
+}
+
 void MainWindow::on_btnRefresh_clicked() {
   // disable refresh button
   // button will be enable, once all process finished
@@ -289,27 +316,24 @@ void MainWindow::on_btnRefresh_clicked() {
   QDir dir = input_dir;
   QStringList files = dir.entryList(nameFilter);
   QString databaseName;
-  FileLoader *thread;
-
-//  int load_task_number = files.length();
   QVector<int> load_file_by_interval;
   QVector<int> update_parent_by_weight;
   QVector<int> update_resistance_support_by_threshold;
-  int update_distfs_rank = 0;
+  int update_histogram = 0;
   IntervalWeight w = WEIGHT_MONTHLY;
 
+  // new: group by interval
   while (w != WEIGHT_INVALID) {
     int temp = queue.length();
 
     for (int i = 0; i < files.size();) {
-      QString symbol = "";
+      QString m_symbol = "";
       IntervalWeight interval = WEIGHT_INVALID;
-
-      databaseName = parse_filename(files[i], &symbol, &interval);
+      databaseName = parse_filename(files[i], &m_symbol, &interval);
 
       if (interval == w) {
-        if (!symbol.isEmpty()) {
-          thread = new FileLoader(input_dir + "/" + files[i], sqlitedb.getDatabase(databaseName), symbol, interval);
+        if (!m_symbol.isEmpty()) {
+          FileLoader *thread = new FileLoader(input_dir + "/" + files[i], database_dir, sqlitedb.getCloneDatabase(databaseName), m_symbol, interval);
           connect(thread, SIGNAL(finished()), this, SLOT(finish_updating_data()));
           queue.enqueue(thread);
         }
@@ -322,20 +346,15 @@ void MainWindow::on_btnRefresh_clicked() {
     }
 
     if (temp < queue.length()) {
-      load_file_by_interval.append(queue.length()-temp);
+      load_file_by_interval.append(queue.length() - temp);
     }
 
     w = SQLiteHandler::get_child_interval(w);
   }
 
-//  for (int i = 0; i < load_task_number; ++i) {
-//    databaseName = parse_filename(files[i], &weight);
-//    thread = new FileLoader(files[i], input_dir, db.getDatabase(databaseName), weight);
-//    connect(thread, SIGNAL(finished()), this, SLOT(finish_updating_data()));
-//    queue.enqueue(thread);
-//  }
-
-  /** File load */
+  //
+  // File load
+  //
   last_message_update = msg_loading_file;
 
   while (true) {
@@ -368,6 +387,7 @@ void MainWindow::on_btnRefresh_clicked() {
       }
     }
 
+    // old
 //    if (active_thread < max_thread) {
 //      if (load_task_number > 0) {
 //        queue.dequeue()->start();
@@ -379,6 +399,7 @@ void MainWindow::on_btnRefresh_clicked() {
   }
 
   qDebug() << "------------------ end of file load";
+
   prepare_database_update_flag();
 
   if (enable_parent_indexing) {
@@ -391,7 +412,7 @@ void MainWindow::on_btnRefresh_clicked() {
       symbol = list_symbol[i];
       databaseName = SQLiteHandler::getDatabaseName(symbol, WEIGHT_DAILY);
       if (force_update || database_update_flag[databaseName]) {
-        thread = new ParentIndexThread(sqlitedb.getCloneDatabase(databaseName), symbol, WEIGHT_WEEKLY);
+        thread = new ParentIndexThread(sqlitedb.getCloneDatabase(databaseName), database_dir, symbol, WEIGHT_WEEKLY);
         connect(thread, SIGNAL(finished()), this, SLOT(finish_updating_data()));
         queue.enqueue(thread);
       }
@@ -407,7 +428,7 @@ void MainWindow::on_btnRefresh_clicked() {
       symbol = list_symbol[i];
       databaseName = SQLiteHandler::getDatabaseName(symbol, WEIGHT_WEEKLY);
       if (force_update || database_update_flag[databaseName]) {
-        thread = new ParentIndexThread(sqlitedb.getCloneDatabase(databaseName), symbol, WEIGHT_MONTHLY);
+        thread = new ParentIndexThread(sqlitedb.getCloneDatabase(databaseName), database_dir, symbol, WEIGHT_MONTHLY);
         connect(thread, SIGNAL(finished()), this, SLOT(finish_updating_data()));
         queue.enqueue(thread);
       }
@@ -423,7 +444,7 @@ void MainWindow::on_btnRefresh_clicked() {
       symbol = list_symbol[i];
       databaseName = SQLiteHandler::getDatabaseName(symbol, WEIGHT_60MIN);
       if (force_update || database_update_flag[databaseName]) {
-        thread = new ParentIndexThread(sqlitedb.getCloneDatabase(databaseName), symbol, WEIGHT_DAILY);
+        thread = new ParentIndexThread(sqlitedb.getCloneDatabase(databaseName), database_dir, symbol, WEIGHT_DAILY);
         connect(thread, SIGNAL(finished()), this, SLOT(finish_updating_data()));
         queue.enqueue(thread);
       }
@@ -439,7 +460,7 @@ void MainWindow::on_btnRefresh_clicked() {
       symbol = list_symbol[i];
       databaseName = SQLiteHandler::getDatabaseName(symbol, WEIGHT_5MIN);
       if (force_update || database_update_flag[databaseName]) {
-        thread = new ParentIndexThread(sqlitedb.getCloneDatabase(databaseName), symbol, WEIGHT_60MIN);
+        thread = new ParentIndexThread(sqlitedb.getCloneDatabase(databaseName), database_dir, symbol, WEIGHT_60MIN);
         connect(thread, SIGNAL(finished()), this, SLOT(finish_updating_data()));
         queue.enqueue(thread);
       }
@@ -451,18 +472,24 @@ void MainWindow::on_btnRefresh_clicked() {
     }
 
     // 1min
-//    for (int i = 0; i < symbol_length; ++i) {
-//      symbol = list_symbol[i];
-//      thread = new ParentIndexThread(symbol+"_5min.db",db.getCloneDatabase(symbol+"_1min.db"),5);
-//      connect(thread, SIGNAL(finished()), this, SLOT(finish_updating_data()));
-//      queue.enqueue(thread);
-//    }
+    for (int i = 0; i < symbol_length; ++i) {
+      symbol = list_symbol[i];
+      databaseName = SQLiteHandler::getDatabaseName(symbol, WEIGHT_1MIN);
+      if (force_update || database_update_flag[databaseName]) {
+        thread = new ParentIndexThread(sqlitedb.getCloneDatabase(databaseName), database_dir, symbol, WEIGHT_5MIN);
+        connect(thread, SIGNAL(finished()), this, SLOT(finish_updating_data()));
+        queue.enqueue(thread);
+      }
+    }
 
-//    update_parent_by_weight.append(queue.length() - temp);
+    if (temp <queue.length()) {
+      update_parent_by_weight.append(queue.length() - temp);
+      temp = queue.length();
+    }
   }
 
-  if (enable_test_point_update) {
-    QVector<XmlConfigHandler::t_threshold> vec;
+  if (enable_update_support_resistance) {
+    QVector<XmlConfigHandler::t_sr_threshold> vec;
     ResistanceSupportUpdater *thread;
     double b_value;
     double threshold;
@@ -472,158 +499,113 @@ void MainWindow::on_btnRefresh_clicked() {
     int process_count = 0;
     bool doRecalculate;
 
-    //
-    // Monthly, Weekly, Daily
-    //
     for (int j = 0; j < vec_length; ++j) {
-      process_count = 0;
 
-      for (int i = 0; i < symbol_length; ++i) {
-        symbol = list_symbol[i];
-        vec = list_threshold[symbol];
-        threshold = vec[j].threshold; // 2
-        b_value = vec[j].b; // breakpoint
-        id_threshold = vec[j].index; // id_threshold
-        doRecalculate = vec[j].recalculate; // recalculate flag
+      for (IntervalWeight m_interval = WEIGHT_MONTHLY;
+           m_interval != WEIGHT_INVALID;
+           m_interval = SQLiteHandler::get_child_interval(m_interval)) {
+        process_count = 0;
 
-        if (doRecalculate || (b_value > 0 && threshold > 0)) {
-          if (doRecalculate || database_update_flag[SQLiteHandler::getDatabaseName(symbol,WEIGHT_MONTHLY)]) {
-            thread = new ResistanceSupportUpdater(sqlitedb.getCloneDatabase(symbol,WEIGHT_MONTHLY), symbol, WEIGHT_MONTHLY, b_value, threshold, id_threshold, 0);
-            thread->set_recalculate(doRecalculate);
-            connect(thread, SIGNAL(finished()), this, SLOT(finish_updating_data()));
-            queue.enqueue(thread);
-            ++process_count;
-          }
+        for (int i = 0; i < symbol_length; ++i) {
+          symbol = list_symbol[i];
+          vec = list_threshold[symbol];
+          threshold = vec[j].test_point; // 2
+          b_value = vec[j].break_threshold; // breakpoint
+          id_threshold = vec[j].t_id; // id_threshold
+          doRecalculate = vec[j].recalculate; // recalculate flag
 
-          if (doRecalculate || database_update_flag[SQLiteHandler::getDatabaseName(symbol,WEIGHT_WEEKLY)]) {
-            thread = new ResistanceSupportUpdater(sqlitedb.getCloneDatabase(symbol,WEIGHT_WEEKLY), symbol, WEIGHT_WEEKLY, b_value, threshold, id_threshold, 0);
-            thread->set_recalculate(doRecalculate);
-            connect(thread, SIGNAL(finished()), this, SLOT(finish_updating_data()));
-            queue.enqueue(thread);
-            ++process_count;
-          }
+          if (doRecalculate || (b_value > 0 && threshold > 0)) {
+            if (doRecalculate || database_update_flag[SQLiteHandler::getDatabaseName(symbol, m_interval)]) {
 
-          if (doRecalculate || database_update_flag[SQLiteHandler::getDatabaseName(symbol,WEIGHT_DAILY)]) {
-            last_rowid = database_last_rowid[sqlitedb.getDatabaseName(symbol,WEIGHT_DAILY)];
-            thread = new ResistanceSupportUpdater(sqlitedb.getCloneDatabase(symbol,WEIGHT_DAILY), symbol, WEIGHT_DAILY, b_value, threshold, id_threshold, last_rowid);
-            thread->set_recalculate(doRecalculate);
-            connect(thread, SIGNAL(finished()), this, SLOT(finish_updating_data()));
-            queue.enqueue(thread);
-            ++process_count;
+              if (m_interval >= WEIGHT_DAILY) {
+                last_rowid = database_last_rowid[sqlitedb.getDatabaseName(symbol, m_interval)];
+              } else {
+                last_rowid = 0;
+              }
+
+              thread = new ResistanceSupportUpdater(
+                            sqlitedb.getCloneDatabase(symbol,m_interval),
+                            database_dir, symbol, m_interval, b_value, threshold, id_threshold, last_rowid);
+
+              thread->set_recalculate(doRecalculate);
+              connect(thread, SIGNAL(finished()), this, SLOT(finish_updating_data()));
+              queue.enqueue(thread);
+              ++process_count;
+            }
           }
         }
-      }
 
-      if (process_count > 0) {
-        update_resistance_support_by_threshold.push_back(process_count);
-      }
-    }
-
-    //
-    // Intra-day
-    //
-    for (int j = 0; j < vec_length; ++j) {
-      process_count = 0;
-
-      for (int i = 0; i < symbol_length; ++i) {
-        symbol = list_symbol[i];
-        vec = list_threshold[symbol];
-        threshold = vec[j].threshold; // 2
-        b_value = vec[j].b; // breakpoint
-        id_threshold = vec[j].index; // id_threshold
-        doRecalculate = vec[j].recalculate; // recalculate flag
-
-        if (doRecalculate || (b_value > 0 && threshold > 0)) {
-          if (doRecalculate || database_update_flag[SQLiteHandler::getDatabaseName(symbol, WEIGHT_60MIN)]) {
-            thread = new ResistanceSupportUpdater(sqlitedb.getCloneDatabase(symbol,WEIGHT_60MIN), symbol, WEIGHT_60MIN, b_value, threshold, id_threshold, 0);
-            thread->set_recalculate(doRecalculate);
-            connect(thread, SIGNAL(finished()), this, SLOT(finish_updating_data()));
-            queue.enqueue(thread);
-            ++process_count;
-          }
+        if (process_count > 0) {
+          update_resistance_support_by_threshold.push_back(process_count);
         }
-      }
-
-      if (process_count > 0) {
-        update_resistance_support_by_threshold.push_back(process_count);
-      }
-
-      process_count = 0;
-
-      for (int i = 0; i < symbol_length; ++i) {
-        symbol = list_symbol[i];
-        vec = list_threshold[symbol];
-        threshold = vec[j].threshold; // 2
-        b_value = vec[j].b; // breakpoint
-        id_threshold = vec[j].index; // id_threshold
-        doRecalculate = vec[j].recalculate; // recalculate flag
-
-        if (doRecalculate || (b_value > 0 && threshold > 0)) {
-          if (doRecalculate || database_update_flag[SQLiteHandler::getDatabaseName(symbol, WEIGHT_5MIN)]) {
-            thread = new ResistanceSupportUpdater(sqlitedb.getCloneDatabase(symbol,WEIGHT_5MIN), symbol, WEIGHT_5MIN, b_value, threshold, id_threshold, 0);
-            thread->set_recalculate(doRecalculate);
-            connect(thread, SIGNAL(finished()), this, SLOT(finish_updating_data()));
-            queue.enqueue(thread);
-            ++process_count;
-          }
-        }
-      }
-
-      if (process_count > 0) {
-        update_resistance_support_by_threshold.push_back(process_count);
       }
     }
   }
 
-  if (enable_distfs_rank) {
+  if (enable_update_histogram) {
     HistogramUpdater *thread;
-    update_distfs_rank = queue.length();
+    update_histogram = queue.length();
     bool force_update = false;
+    bool doRecalculate = false; // TODO: flag for recalculate thres
 
     for (int i = 0; i < symbol_length; ++i) {
       symbol = list_symbol[i];
 
       databaseName = SQLiteHandler::getDatabaseName(symbol,WEIGHT_MONTHLY);
-      if (force_update || database_update_flag[databaseName]) {
-        thread = new HistogramUpdater(sqlitedb.getCloneDatabase(databaseName), 2001);
+      if (force_update || doRecalculate || database_update_flag[databaseName]) {
+        thread = new HistogramUpdater(sqlitedb.getCloneDatabase(databaseName), 2001, symbol);
+        thread->set_recalculate_threshold(doRecalculate);
         connect(thread, SIGNAL(finished()), this, SLOT(finish_updating_data()));
         queue.enqueue(thread);
       }
 
       databaseName = SQLiteHandler::getDatabaseName(symbol,WEIGHT_WEEKLY);
-      if (force_update || database_update_flag[databaseName]) {
-        thread = new HistogramUpdater(sqlitedb.getCloneDatabase(databaseName), 2001);
+      if (force_update || doRecalculate || database_update_flag[databaseName]) {
+        thread = new HistogramUpdater(sqlitedb.getCloneDatabase(databaseName), 2001, symbol);
+        thread->set_recalculate_threshold(doRecalculate);
         connect(thread, SIGNAL(finished()), this, SLOT(finish_updating_data()));
         queue.enqueue(thread);
       }
 
       databaseName = SQLiteHandler::getDatabaseName(symbol,WEIGHT_DAILY);
-      if (force_update || database_update_flag[databaseName]) {
-        thread = new HistogramUpdater(sqlitedb.getCloneDatabase(databaseName), 2001);
+      if (force_update || doRecalculate || database_update_flag[databaseName]) {
+        thread = new HistogramUpdater(sqlitedb.getCloneDatabase(databaseName), 2001, symbol);
+        thread->set_recalculate_threshold(doRecalculate);
         connect(thread, SIGNAL(finished()), this, SLOT(finish_updating_data()));
         queue.enqueue(thread);
       }
 
       databaseName = SQLiteHandler::getDatabaseName(symbol,WEIGHT_60MIN);
-      if (force_update || database_update_flag[databaseName]) {
-        thread = new HistogramUpdater(sqlitedb.getCloneDatabase(databaseName), 2001);
+      if (force_update || doRecalculate || database_update_flag[databaseName]) {
+        thread = new HistogramUpdater(sqlitedb.getCloneDatabase(databaseName), 2001, symbol);
+        thread->set_recalculate_threshold(doRecalculate);
         connect(thread, SIGNAL(finished()), this, SLOT(finish_updating_data()));
         queue.enqueue(thread);
       }
 
       databaseName = SQLiteHandler::getDatabaseName(symbol,WEIGHT_5MIN);
-      if (force_update || database_update_flag[databaseName]) {
-        thread = new HistogramUpdater(sqlitedb.getCloneDatabase(databaseName), 2011);
+      if (force_update || doRecalculate || database_update_flag[databaseName]) {
+        thread = new HistogramUpdater(sqlitedb.getCloneDatabase(databaseName), 2011, symbol);
+        thread->set_recalculate_threshold(doRecalculate);
+        connect(thread, SIGNAL(finished()), this, SLOT(finish_updating_data()));
+        queue.enqueue(thread);
+      }
+
+      databaseName = SQLiteHandler::getDatabaseName(symbol,WEIGHT_1MIN);
+      if (force_update || doRecalculate || database_update_flag[databaseName]) {
+        thread = new HistogramUpdater(sqlitedb.getCloneDatabase(databaseName), 2011, symbol);
+        thread->set_recalculate_threshold(doRecalculate);
         connect(thread, SIGNAL(finished()), this, SLOT(finish_updating_data()));
         queue.enqueue(thread);
       }
     }
 
-    update_distfs_rank = queue.length() - update_distfs_rank;
+    update_histogram = queue.length() - update_histogram;
   }
 
-
-  /** Indexing database */
+  //
+  // Indexing database
+  //
   last_message_update = msg_update_index;
   while (true) {
     QCoreApplication::processEvents();
@@ -653,9 +635,12 @@ void MainWindow::on_btnRefresh_clicked() {
       }
     }
   }
+
   qDebug() << "------------------ end of indexing";
 
-  /** Resistance & Support */
+  //
+  // Resistance & Support
+  //
   last_message_update = msg_update_test_point;
   while (true) {
     QCoreApplication::processEvents();
@@ -684,13 +669,16 @@ void MainWindow::on_btnRefresh_clicked() {
       }
     }
   }
+
   qDebug() << "------------------ end of resistance & support";
 
-  /** Histogram Rank */
+  //
+  // Histogram Rank
+  //
   last_message_update = msg_update_distfs;
   while (true) {
     QCoreApplication::processEvents();
-    if (active_thread == 0 && update_distfs_rank == 0) break;
+    if (active_thread == 0 && update_histogram == 0) break;
 
     if (++counter >= 100000) {
       dot_idx = (dot_idx + 1) % 5;
@@ -699,15 +687,15 @@ void MainWindow::on_btnRefresh_clicked() {
     }
 
     if (active_thread < max_thread) {
-      if (update_distfs_rank > 0) {
+      if (update_histogram > 0) {
         queue.dequeue()->start();
         start_updating_data();
-        --update_distfs_rank;
+        --update_histogram;
       }
     }
   }
-  qDebug() << "------------------ end of histogram rank";
 
+  qDebug() << "------------------ end of histogram rank";
   qDebug() << "Time elapsed:" << time.elapsed()/1000.0 << "sec(s), thread:" << active_thread << "," << queue.isEmpty();
 
   ui->btnRefresh->setEnabled(true);
@@ -746,8 +734,16 @@ QString MainWindow::sql_string_builder(FilterOptionFactory *table,
                                        const IntervalWeight &projection_interval,
                                        const bool &enable_projection,
                                        const int &id_threshold,
-                                       const double &sr_threshold,
-                                       const double &avg_threshold) {
+                                       const double &breakThreshold,
+                                       const double &avgThreshold,
+                                       const int &macd_id,
+                                       const int &rsi_id,
+                                       const int &slowk_id,
+                                       const int &slowd_id,
+                                       const int &cgf_id,
+                                       const int &clf_id,
+                                       const int &cgs_id,
+                                       const int &cls_id) {
   QVector<bool> SRjoin;
   QStringList projection;
   QStringList SRjoinAlias;
@@ -755,17 +751,33 @@ QString MainWindow::sql_string_builder(FilterOptionFactory *table,
   const QString slowavg_name = BarDataAdapter::avg_name_by_interval(projection_interval, SLOWAVG_LENGTH);
   const QString main_alias = "A";
   const QString main_interval = table->get_smallest_interval();
+
   QString whereArgs = "";
   QString A_ = "A.";
   QString SRAlias = "";
   QString canonical_alias;
   QString intersect_type;
+  QString _threshold;
+  QString _value1, _value2;
+  QString _column1, _column2;
+  QString _rank1, _rank2;
+
   const int main_intervalweight = table->get_smallest_interval_weight();
   int N = table->length();
   int decimal_precision = (symbol == "@AD" || symbol == "@EC" || symbol == "@JY")? 4 : 2;
   bool enable_developer_mode = false;
   IntervalWeight base_interval = table->get_smallest_interval_weight_v2();
   IntervalWeight w = WEIGHT_LARGEST;
+
+  XmlConfigHandler *config = XmlConfigHandler::get_instance();
+  QVector<XmlConfigHandler::t_threshold_1> c_macd = config->get_macd_threshold();
+  QVector<XmlConfigHandler::t_threshold_1> c_rsi = config->get_rsi_threshold();
+  QVector<XmlConfigHandler::t_threshold_1> c_slowk = config->get_slowk_threshold();
+  QVector<XmlConfigHandler::t_threshold_1> c_slowd = config->get_slowd_threshold();
+  QVector<XmlConfigHandler::t_threshold_2> c_cgf = config->get_cgf_threshold(symbol);
+  QVector<XmlConfigHandler::t_threshold_2> c_clf = config->get_clf_threshold(symbol);
+  QVector<XmlConfigHandler::t_threshold_2> c_cgs = config->get_cgs_threshold(symbol);
+  QVector<XmlConfigHandler::t_threshold_2> c_cls = config->get_cls_threshold(symbol);
 
   //
   // Index[0] -> main connection
@@ -828,23 +840,6 @@ QString MainWindow::sql_string_builder(FilterOptionFactory *table,
     projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_CLOSE, decimal_precision));
     projection.append(A__ + SQLiteHandler::COLUMN_NAME_PREV_BARCOLOR);
     projection.append(A__ + SQLiteHandler::COLUMN_NAME_VOLUME);
-    projection.append(case_when_column_null(A__+SQLiteHandler::COLUMN_NAME_MACD, 6));
-    projection.append(case_when_column_null(A__+SQLiteHandler::COLUMN_NAME_MACD_RANK, 4));
-    projection.append(A__ + SQLiteHandler::COLUMN_NAME_MACD_G0);
-    projection.append(A__ + SQLiteHandler::COLUMN_NAME_MACD_L0);
-    projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_MACD_G0_RANK, 4));
-    projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_MACD_L0_RANK, 4));
-    projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_MACDAVG, 6));
-    projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_MACDDIFF, 6));
-    projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_RSI, 2));
-    projection.append(A__ + SQLiteHandler::COLUMN_NAME_RSI_G70);
-    projection.append(A__ + SQLiteHandler::COLUMN_NAME_RSI_L30);
-    projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_SLOWK, 2));
-    projection.append(A__ + SQLiteHandler::COLUMN_NAME_SLOWK_G80);
-    projection.append(A__ + SQLiteHandler::COLUMN_NAME_SLOWK_L20);
-    projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_SLOWD, 2));
-    projection.append(A__ + SQLiteHandler::COLUMN_NAME_SLOWD_G80);
-    projection.append(A__ + SQLiteHandler::COLUMN_NAME_SLOWD_L20);
 
     projection_name->append(SQLiteHandler::COLUMN_NAME_ROWID);
     projection_name->append(SQLiteHandler::COLUMN_NAME_DATE);
@@ -859,70 +854,169 @@ QString MainWindow::sql_string_builder(FilterOptionFactory *table,
     projection_name->append("Close");
     projection_name->append("PrevBar");
     projection_name->append("Volume");
+
+    _threshold = "_" + QString::number(macd_id);
+    _value1 = SQLiteHandler::COLUMN_NAME_MACD_VALUE1 + _threshold;
+    _value2 = SQLiteHandler::COLUMN_NAME_MACD_VALUE2 + _threshold;
+    _column1 = "MACD " + c_macd[macd_id-1].operator1 + " " + QString::number(c_macd[macd_id-1].value1);
+    _column2 = "MACD " + c_macd[macd_id-1].operator2 + " " + QString::number(c_macd[macd_id-1].value2);
+    QString macd_r1 = SQLiteHandler::COLUMN_NAME_MACD_RANK1 + _threshold;
+    QString macd_r2 = SQLiteHandler::COLUMN_NAME_MACD_RANK2 + _threshold;
+
+    projection.append(case_when_column_null(A__+SQLiteHandler::COLUMN_NAME_MACD, 6));
+    projection.append(case_when_column_null(A__+SQLiteHandler::COLUMN_NAME_MACD_RANK, 4));
+    projection.append(A__ + _value1);
+    projection.append(case_when_column_null(A__ + macd_r1, 4));
+    projection.append(A__ + _value2);
+    projection.append(case_when_column_null(A__ + macd_r2, 4));
+    projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_MACDAVG, 6));
+    projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_MACDDIFF, 6));
+
     projection_name->append("MACD");
     projection_name->append("MACD (R)");
-    projection_name->append("MACD > 0");
-    projection_name->append("MACD < 0");
-    projection_name->append("MACD > 0 (R)");
-    projection_name->append("MACD < 0 (R)");
+    projection_name->append(_column1);
+    projection_name->append(_column1 + " (R)");
+    projection_name->append(_column2);
+    projection_name->append(_column2 + " (R)");
     projection_name->append("MACDAvg");
     projection_name->append("MACDDiff");
+
+//    projection.append(A__ + SQLiteHandler::COLUMN_NAME_MACD_G0);
+//    projection.append(A__ + SQLiteHandler::COLUMN_NAME_MACD_L0);
+//    projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_MACD_G0_RANK, 4));
+//    projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_MACD_L0_RANK, 4));
+//    projection_name->append("MACD > 0");
+//    projection_name->append("MACD < 0");
+//    projection_name->append("MACD > 0 (R)");
+//    projection_name->append("MACD < 0 (R)");
+
+    _threshold = "_" + QString::number(rsi_id);
+    _column1 = "RSI " + c_rsi[rsi_id-1].operator1 + " " + QString::number(c_rsi[rsi_id-1].value1);
+    _column2 = "RSI " + c_rsi[rsi_id-1].operator2 + " " + QString::number(c_rsi[rsi_id-1].value2);
+
+    projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_RSI, 2));
+    projection.append(A__ + SQLiteHandler::COLUMN_NAME_RSI_VALUE1 + _threshold);
+    projection.append(A__ + SQLiteHandler::COLUMN_NAME_RSI_RANK1 + _threshold);
+    projection.append(A__ + SQLiteHandler::COLUMN_NAME_RSI_VALUE2 + _threshold);
+    projection.append(A__ + SQLiteHandler::COLUMN_NAME_RSI_RANK2 + _threshold);
+
     projection_name->append("RSI");
-    projection_name->append("RSI > 70");
-    projection_name->append("RSI < 30");
+    projection_name->append(_column1);
+    projection_name->append(_column1 + " (R)");
+    projection_name->append(_column2);
+    projection_name->append(_column2 + " (R)");
+
+//    projection.append(A__ + SQLiteHandler::COLUMN_NAME_RSI_G70);
+//    projection.append(A__ + SQLiteHandler::COLUMN_NAME_RSI_L30);
+//    projection_name->append("RSI > 70");
+//    projection_name->append("RSI < 30");
+
+
+    _threshold = "_" + QString::number(slowk_id);
+    _column1 = "SlowK " + c_slowk[slowk_id-1].operator1 + " " + QString::number(c_slowk[slowk_id-1].value1);
+    _column2 = "SlowK " + c_slowk[slowk_id-1].operator2 + " " + QString::number(c_slowk[slowk_id-1].value2);
+
+    projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_SLOWK, 2));
+    projection.append(A__ + SQLiteHandler::COLUMN_NAME_SLOWK_VALUE1 + _threshold);
+    projection.append(A__ + SQLiteHandler::COLUMN_NAME_SLOWK_RANK1 + _threshold);
+    projection.append(A__ + SQLiteHandler::COLUMN_NAME_SLOWK_VALUE2 + _threshold);
+    projection.append(A__ + SQLiteHandler::COLUMN_NAME_SLOWK_RANK2 + _threshold);
+
     projection_name->append("SlowK");
-    projection_name->append("SlowK > 80");
-    projection_name->append("SlowK < 20");
+    projection_name->append(_column1);
+    projection_name->append(_column1 + " (R)");
+    projection_name->append(_column2);
+    projection_name->append(_column2 + " (R)");
+
+//    projection.append(A__ + SQLiteHandler::COLUMN_NAME_SLOWK_G80);
+//    projection.append(A__ + SQLiteHandler::COLUMN_NAME_SLOWK_L20);
+//    projection_name->append("SlowK > 80");
+//    projection_name->append("SlowK < 20");
+
+    _threshold = "_" + QString::number(slowd_id);
+    _value1 = SQLiteHandler::COLUMN_NAME_SLOWD_VALUE1 + _threshold;
+    _value2 = SQLiteHandler::COLUMN_NAME_SLOWD_VALUE2 + _threshold;
+    _rank1 = SQLiteHandler::COLUMN_NAME_SLOWD_RANK1 + _threshold;
+    _rank2 = SQLiteHandler::COLUMN_NAME_SLOWD_RANK2 + _threshold;
+    _column1 = "SlowD " + c_slowd[slowd_id-1].operator1 + " " + QString::number(c_slowd[slowd_id-1].value1);
+    _column2 = "SlowD " + c_slowd[slowd_id-1].operator2 + " " + QString::number(c_slowd[slowd_id-1].value2);
+
+    projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_SLOWD, 2));
+    projection.append(A__ + _value1);
+    projection.append(A__ + _rank1);
+    projection.append(A__ + _value2);
+    projection.append(A__ + _rank2);
+
     projection_name->append("SlowD");
-    projection_name->append("SlowD > 80");
-    projection_name->append("SlowD < 20");
+    projection_name->append(_column1);
+    projection_name->append(_column1 + " (R)");
+    projection_name->append(_column2);
+    projection_name->append(_column2 + " (R)");
+
+//    projection.append(A__ + SQLiteHandler::COLUMN_NAME_SLOWD_G80);
+//    projection.append(A__ + SQLiteHandler::COLUMN_NAME_SLOWD_L20);
+//    projection_name->append("SlowD > 80");
+//    projection_name->append("SlowD < 20");
+
+    if (base_interval < WEIGHT_DAILY && projection_interval == WEIGHT_DAILY) {
+      projection.append(case_when_column_null(A_ + SQLiteHandler::COLUMN_NAME_PREV_DAILY_ATR, 4));
+      projection_name->append("PrevATR");
+    }
 
     projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_ATR, 4));
     projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_ATR_RANK, 4));
-    projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_FASTAVG, 4));
-    projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_SLOWAVG, 4));
-    projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_FASTAVG_SLOPE, 4));
-    projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_SLOWAVG_SLOPE, 4));
     projection_name->append("ATR");
     projection_name->append("ATR (R)");
+
+    projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_FASTAVG, 4));
+    projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_SLOWAVG, 4));
     projection_name->append(fastavg_name);
     projection_name->append(slowavg_name);
+
+    // Day-10 , Day-50 realtime calculation for intraday
+    if (base_interval < WEIGHT_DAILY && projection_interval == WEIGHT_DAILY) {
+      projection.append(case_when_column_null(A_ + SQLiteHandler::COLUMN_NAME_DAY10, 4));
+      projection.append(case_when_column_null(A_ + SQLiteHandler::COLUMN_NAME_DAY50, 4));
+      projection_name->append("Day-10 (F)");
+      projection_name->append("Day-50 (F)");
+    }
+
+    projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_FASTAVG_SLOPE, 4));
+    projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_SLOWAVG_SLOPE, 4));
     projection_name->append("F-Slope");
     projection_name->append("S-Slope");
 
     projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_DISTOF, 4));
     projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_DISTOF_RANK, 4));
-    projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_DISTOS, 4));
-    projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_DISTOS_RANK, 4));
-    projection_name->append("Dist(O-F)");
-    projection_name->append("Dist(O-F) (R)");
-    projection_name->append("Dist(O-S)");
-    projection_name->append("Dist(O-S) (R)");
-
     projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_DISTHF, 4));
     projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_DISTHF_RANK, 4));
-    projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_DISTHS, 4));
-    projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_DISTHS_RANK, 4));
-    projection_name->append("Dist(H-F)");
-    projection_name->append("Dist(H-F) (R)");
-    projection_name->append("Dist(H-S)");
-    projection_name->append("Dist(H-S) (R)");
-
     projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_DISTLF, 4));
     projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_DISTLF_RANK, 4));
-    projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_DISTLS, 4));
-    projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_DISTLS_RANK, 4));
-    projection_name->append("Dist(L-F)");
-    projection_name->append("Dist(L-F) (R)");
-    projection_name->append("Dist(L-S)");
-    projection_name->append("Dist(L-S) (R)");
-
     projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_DISTCF, 4));
     projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_DISTCF_RANK, 4));
-    projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_DISTCS, 4));
-    projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_DISTCS_RANK, 4));
+    projection_name->append("Dist(O-F)");
+    projection_name->append("Dist(O-F) (R)");
+    projection_name->append("Dist(H-F)");
+    projection_name->append("Dist(H-F) (R)");
+    projection_name->append("Dist(L-F)");
+    projection_name->append("Dist(L-F) (R)");
     projection_name->append("Dist(C-F)");
     projection_name->append("Dist(C-F) (R)");
+
+    projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_DISTOS, 4));
+    projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_DISTOS_RANK, 4));
+    projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_DISTHS, 4));
+    projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_DISTHS_RANK, 4));
+    projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_DISTLS, 4));
+    projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_DISTLS_RANK, 4));
+    projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_DISTCS, 4));
+    projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_DISTCS_RANK, 4));
+    projection_name->append("Dist(O-S)");
+    projection_name->append("Dist(O-S) (R)");
+    projection_name->append("Dist(H-S)");
+    projection_name->append("Dist(H-S) (R)");
+    projection_name->append("Dist(L-S)");
+    projection_name->append("Dist(L-S) (R)");
     projection_name->append("Dist(C-S)");
     projection_name->append("Dist(C-S) (R)");
 
@@ -932,67 +1026,128 @@ QString MainWindow::sql_string_builder(FilterOptionFactory *table,
     projection_name->append("Dist(F-S) (R)");
 
     projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_DISTCC_FSCROSS, 4));
+    projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_DISTCC_FSCROSS_ATR, 4));
     projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_DISTCC_FSCROSS_RANK, 4));
-    projection.append(A__ + SQLiteHandler::COLUMN_NAME_FGS);
-    projection.append(A__ + SQLiteHandler::COLUMN_NAME_FLS);
-    projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_FGS_RANK, 4));
-    projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_FLS_RANK, 4));
-    projection.append(A__ + SQLiteHandler::COLUMN_NAME_CGF);
-    projection.append(A__ + SQLiteHandler::COLUMN_NAME_CLF);
-    projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_CGF_RANK, 4));
-    projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_CLF_RANK, 4));
-    projection.append(A__ + SQLiteHandler::COLUMN_NAME_CGS);
-    projection.append(A__ + SQLiteHandler::COLUMN_NAME_CLS);
+    projection_name->append("Dist(FS-Cross)");
+    projection_name->append("Dist(FS-Cross) (ATR)");
+    projection_name->append("Dist(FS-Cross) (R)");
 
-    projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_CGS_RANK, 4));
-    projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_CLS_RANK, 4));
+    projection.append(A__ + SQLiteHandler::COLUMN_NAME_FLS);
+    projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_FLS_RANK, 4));
+    projection.append(A__ + SQLiteHandler::COLUMN_NAME_FGS);
+    projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_FGS_RANK, 4));
+    projection_name->append("F < S");
+    projection_name->append("F < S (R)");
+    projection_name->append("F > S");
+    projection_name->append("F > S (R)");
+
+    // CLF
+    _threshold = "_" + QString::number(clf_id);
+    projection.append(A__ + SQLiteHandler::COLUMN_NAME_CLF + _threshold);
+    projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_CLF_RANK + _threshold , 4));
+
+    if ( c_clf[ clf_id ].value.toDouble() != 0 ) {
+      _column1 = "C < F+" + BarDataAdapter::remove_trailing_zero( c_clf[ clf_id ].value ) ;
+    } else {
+      _column1 = "C < F";
+    }
+    projection_name->append(_column1);
+    projection_name->append(_column1 + " (R)");
+
+    // CGF
+    _threshold = "_" + QString::number(cgf_id);
+    projection.append(A__ + SQLiteHandler::COLUMN_NAME_CGF + _threshold);
+    projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_CGF_RANK + _threshold , 4));
+
+    if ( c_cgf[ cgf_id ].value.toDouble() != 0 ) {
+      _column1 = "C > F-" + BarDataAdapter::remove_trailing_zero( c_cgf[ cgf_id ].value ) ;
+    } else {
+      _column1 = "C > F";
+    }
+    projection_name->append(_column1);
+    projection_name->append(_column1 + " (R)");
+
+    // CLS
+    _threshold = "_" + QString::number(cls_id);
+    projection.append(A__ + SQLiteHandler::COLUMN_NAME_CLS + _threshold);
+    projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_CLS_RANK + _threshold , 4));
+
+    if ( c_cls[ cls_id ].value.toDouble() != 0 ) {
+      _column1 = "C < S+" + BarDataAdapter::remove_trailing_zero( c_cls[ cls_id ].value ) ;
+    } else {
+      _column1 = "C < S";
+    }
+    projection_name->append(_column1);
+    projection_name->append(_column1 + " (R)");
+
+    // CGS
+    _threshold = "_" + QString::number(cgs_id);
+    projection.append(A__ + SQLiteHandler::COLUMN_NAME_CGS + _threshold);
+    projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_CGS_RANK + _threshold , 4));
+
+    if ( c_cgs[ cgs_id ].value.toDouble() != 0 ) {
+      _column1 = "C > S-" + BarDataAdapter::remove_trailing_zero( c_cgs[ cgs_id ].value ) ;
+    } else {
+      _column1 = "C > S";
+    }
+    projection_name->append(_column1);
+    projection_name->append(_column1 + " (R)");
+
+//    projection.append(A__ + SQLiteHandler::COLUMN_NAME_CLS);
+//    projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_CLS_RANK, 4));
+//    projection_name->append("C < S");
+//    projection_name->append("C < S (R)");
+
+//    projection.append(A__ + SQLiteHandler::COLUMN_NAME_CGS);
+//    projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_CGS_RANK, 4));
+//    projection_name->append("C > S");
+//    projection_name->append("C > S (R)");
+
+    projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_CANDLE_UPTAIL, 4));
     projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_N_UPTAIL, 4));
     projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_CANDLE_UPTAIL_RANK, 4));
+    projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_CANDLE_DOWNTAIL, 4));
     projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_N_DOWNTAIL, 4));
     projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_CANDLE_DOWNTAIL_RANK, 4));
+    projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_CANDLE_BODY, 4));
     projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_N_BODY, 4));
     projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_CANDLE_BODY_RANK, 4));
+    projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_CANDLE_TOTALLENGTH, 4));
     projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_N_TOTALLENGTH, 4));
     projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_CANDLE_TOTALLENGTH_RANK, 4));
 
-    projection_name->append("Dist(FS-Cross)");
-    projection_name->append("Dist(FS-Cross) (R)");
-    projection_name->append("F > S");
-    projection_name->append("F < S");
-    projection_name->append("F > S (R)");
-    projection_name->append("F < S (R)");
-    projection_name->append("C > F");
-    projection_name->append("C < F");
-    projection_name->append("C > F (R)");
-    projection_name->append("C < F (R)");
-    projection_name->append("C > S");
-    projection_name->append("C < S");
-    projection_name->append("C > S (R)");
-    projection_name->append("C < S (R)");
     projection_name->append("Uptail");
+    projection_name->append("Uptail (N)");
     projection_name->append("Uptail (R)");
     projection_name->append("Downtail");
+    projection_name->append("Downtail (N)");
     projection_name->append("Downtail (R)");
     projection_name->append("Body");
+    projection_name->append("Body (N)");
     projection_name->append("Body (R)");
     projection_name->append("TotalLength");
+    projection_name->append("TotalLength (N)");
     projection_name->append("TotalLength (R)");
 
     //
     // DistResistance & DistSupport
     //
-    QString t = "_" + QString::number(id_threshold + 1);
+    QString t = "_" + QString::number(id_threshold+1); // non-zero based
     projection.append(A__ + SQLiteHandler::COLUMN_NAME_RES + t);
+    projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_DISTRES + t, 4));
     projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_DISTRES_ATR + t, 4));
     projection.append(A__ + SQLiteHandler::COLUMN_NAME_DISTRES_RANK + t);
     projection.append(A__ + SQLiteHandler::COLUMN_NAME_SUP + t);
+    projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_DISTSUP + t, 4));
     projection.append(case_when_column_null(A__ + SQLiteHandler::COLUMN_NAME_DISTSUP_ATR + t, 4));
     projection.append(A__ + SQLiteHandler::COLUMN_NAME_DISTSUP_RANK + t);
-    projection_name->append("Resistance (D)");
+    projection_name->append("Resistance");
     projection_name->append("DistResistance");
+    projection_name->append("DistResistance (ATR)");
     projection_name->append("DistResistance (R)");
-    projection_name->append("Support (D)");
+    projection_name->append("Support");
     projection_name->append("DistSupport");
+    projection_name->append("DistSupport (ATR)");
     projection_name->append("DistSupport (R)");
 
     //
@@ -1014,51 +1169,65 @@ QString MainWindow::sql_string_builder(FilterOptionFactory *table,
     //
     // Zone
     //
-    projection.append(A__ + SQLiteHandler::COLUMN_NAME_ZONE);
-    if (projection_interval == WEIGHT_MONTHLY) {
-      projection_name->append("ZoneMonthly");
-    }
-    else if (projection_interval == WEIGHT_WEEKLY) {
-      projection_name->append("ZoneWeekly");
-    }
-    else if (projection_interval == WEIGHT_DAILY) {
-      projection_name->append("ZoneDaily");
-    }
-    else if (projection_interval == WEIGHT_60MIN) {
-      projection_name->append("Zone60min");
-    }
-    else if (projection_interval == WEIGHT_5MIN) {
-      projection_name->append("Zone5min");
-    }
-    else {
-      projection_name->append("Zone");
-    }
+    _value1 = SQLiteHandler::get_interval_name(projection_interval);
+    projection_name->append("O-Zone" + _value1);
+    projection_name->append("H-Zone" + _value1);
+    projection_name->append("L-Zone" + _value1);
+    projection_name->append("C-Zone" + _value1);
+    projection.append(A__ + SQLiteHandler::COLUMN_NAME_OPEN_ZONE);
+    projection.append(A__ + SQLiteHandler::COLUMN_NAME_HIGH_ZONE);
+    projection.append(A__ + SQLiteHandler::COLUMN_NAME_LOW_ZONE);
+    projection.append(A__ + SQLiteHandler::COLUMN_NAME_CLOSE_ZONE);
 
     if (projection_interval < WEIGHT_60MIN) {
+      projection_name->append("O-Zone60min");
+      projection_name->append("H-Zone60min");
+      projection_name->append("L-Zone60min");
+      projection_name->append("C-Zone60min");
+      projection.append(A__ + SQLiteHandler::COLUMN_NAME_OPEN_ZONE_60MIN);
+      projection.append(A__ + SQLiteHandler::COLUMN_NAME_HIGH_ZONE_60MIN);
+      projection.append(A__ + SQLiteHandler::COLUMN_NAME_LOW_ZONE_60MIN);
       projection.append(A__ + SQLiteHandler::COLUMN_NAME_ZONE_60MIN);
-      projection_name->append(SQLiteHandler::COLUMN_NAME_ZONE_60MIN);
     }
 
     if (projection_interval < WEIGHT_DAILY) {
+      projection_name->append("O-ZoneDaily");
+      projection_name->append("H-ZoneDaily");
+      projection_name->append("L-ZoneDaily");
+      projection_name->append("C-ZoneDaily");
+      projection.append(A__ + SQLiteHandler::COLUMN_NAME_OPEN_ZONE_DAILY);
+      projection.append(A__ + SQLiteHandler::COLUMN_NAME_HIGH_ZONE_DAILY);
+      projection.append(A__ + SQLiteHandler::COLUMN_NAME_LOW_ZONE_DAILY);
       projection.append(A__ + SQLiteHandler::COLUMN_NAME_ZONE_DAILY);
-      projection_name->append(SQLiteHandler::COLUMN_NAME_ZONE_DAILY);
     }
 
     if (projection_interval < WEIGHT_WEEKLY) {
+      projection_name->append("O-ZoneWeekly");
+      projection_name->append("H-ZoneWeekly");
+      projection_name->append("L-ZoneWeekly");
+      projection_name->append("C-ZoneWeekly");
+      projection.append(A__ + SQLiteHandler::COLUMN_NAME_OPEN_ZONE_WEEKLY);
+      projection.append(A__ + SQLiteHandler::COLUMN_NAME_HIGH_ZONE_WEEKLY);
+      projection.append(A__ + SQLiteHandler::COLUMN_NAME_LOW_ZONE_WEEKLY);
       projection.append(A__ + SQLiteHandler::COLUMN_NAME_ZONE_WEEKLY);
-      projection_name->append(SQLiteHandler::COLUMN_NAME_ZONE_WEEKLY);
     }
 
     if (projection_interval < WEIGHT_MONTHLY) {
+      projection_name->append("O-ZoneMonthly");
+      projection_name->append("H-ZoneMonthly");
+      projection_name->append("L-ZoneMonthly");
+      projection_name->append("C-ZoneMonthly");
+      projection.append(A__ + SQLiteHandler::COLUMN_NAME_OPEN_ZONE_MONTHLY);
+      projection.append(A__ + SQLiteHandler::COLUMN_NAME_HIGH_ZONE_MONTHLY);
+      projection.append(A__ + SQLiteHandler::COLUMN_NAME_LOW_ZONE_MONTHLY);
       projection.append(A__ + SQLiteHandler::COLUMN_NAME_ZONE_MONTHLY);
-      projection_name->append(SQLiteHandler::COLUMN_NAME_ZONE_MONTHLY);
     }
 
     //
     // # Resistance/Support Line
     //
     if (projection_interval >= WEIGHT_DAILY ) {
-      QString t = "_" + QString::number(id_threshold + 1);
+      QString t = "_" + QString::number(id_threshold+1); // non-zero based
 
       if (projection_interval == WEIGHT_MONTHLY) {
         projection.append(case_when_column_null("A." + SQLiteHandler::COLUMN_NAME_MONTHLY_RLINE + t, 0));
@@ -1147,7 +1316,7 @@ QString MainWindow::sql_string_builder(FilterOptionFactory *table,
   //
   if (!table->is_single_interval()) {
     for (int i = 0; i < N; ++i) {
-      if (!whereArgs.isEmpty()) whereArgs += " and ";
+//      if (!whereArgs.isEmpty()) whereArgs += " and ";
 
       if (table->getInterval(i) == main_interval) {
         canonical_alias = main_alias;
@@ -1159,6 +1328,7 @@ QString MainWindow::sql_string_builder(FilterOptionFactory *table,
           case WEIGHT_60MIN: canonical_alias = "R4"; break;
           case WEIGHT_5MIN: canonical_alias = "R5"; break;
           case WEIGHT_1MIN: canonical_alias = ""; break;
+          default: canonical_alias = ""; break;
         }
       }
 
@@ -1203,10 +1373,11 @@ QString MainWindow::sql_string_builder(FilterOptionFactory *table,
         }
 
         if (intersect_type == SQLiteHandler::COLUMN_NAME_RESISTANCE_VALUE) {
-          whereArgs += table->getSqlResistanceIntersect(i, canonical_alias, SRAlias, sr_threshold, id_threshold);
+          whereArgs += table->getSqlResistanceIntersect(i, canonical_alias, SRAlias, breakThreshold, id_threshold);
 //          whereArgs += table->getSqlResistanceIntersect_V2(i, canonical_alias, intersect_weight, id_threshold);
 
-          if (isSRJoin) {
+
+          if ( isSRJoin ) {
             SRjoin.push_back(true);
             if (SRjoinAlias.last().startsWith("#"))
               SRjoinAlias[SRjoinAlias.size()-1] = "#R";
@@ -1225,9 +1396,9 @@ QString MainWindow::sql_string_builder(FilterOptionFactory *table,
           }
         }
         else if (intersect_type == SQLiteHandler::COLUMN_NAME_SUPPORT_VALUE) {
-          whereArgs += table->getSqlSupportIntersect(i, canonical_alias, SRAlias, sr_threshold, id_threshold);
+          whereArgs += table->getSqlSupportIntersect(i, canonical_alias, SRAlias, breakThreshold, id_threshold);
 
-          if (isSRJoin) {
+          if ( isSRJoin ) {
             SRjoin.push_back(false);
             if (SRjoinAlias.last().startsWith("#"))
               SRjoinAlias[SRjoinAlias.size()-1] = "#S";
@@ -1246,12 +1417,31 @@ QString MainWindow::sql_string_builder(FilterOptionFactory *table,
           }
         }
         else {
-          whereArgs += table->getSqlPriceIntersect(i, canonical_alias, canonical_weight_alias, avg_threshold);
+          whereArgs += table->getSqlPriceIntersect(i, canonical_alias, canonical_weight_alias, avgThreshold);
         }
       }
       else {
-        whereArgs += table->getSqlString(i, id_threshold, canonical_alias); // XX
+        QString intersectTableAlias;
+        IntervalWeight _w = BarDataAdapter::getIntervalWeightFromName( table->getSecondOperatorText(i) );
+
+        if (_w == main_intervalweight) {
+          intersectTableAlias = "A";
+        } else {
+          switch (_w) {
+            case WEIGHT_MONTHLY: intersectTableAlias = "R3"; break;
+            case WEIGHT_WEEKLY: intersectTableAlias = "R2"; break;
+            case WEIGHT_DAILY: intersectTableAlias = "R1"; break;
+            case WEIGHT_60MIN: intersectTableAlias = "R4"; break;
+            case WEIGHT_5MIN: intersectTableAlias = "R5"; break;
+            case WEIGHT_1MIN: intersectTableAlias = ""; break;
+            default: intersectTableAlias = ""; break;
+          }
+        }
+
+        whereArgs += table->getSqlString(i, id_threshold, canonical_alias, intersectTableAlias);
       }
+
+      whereArgs += table->getSqlConditionRow(i);
     }
   }
   //
@@ -1259,7 +1449,7 @@ QString MainWindow::sql_string_builder(FilterOptionFactory *table,
   //
   else {
     for (int i = 0; i < N; ++i) {
-      if (!whereArgs.isEmpty()) whereArgs += " and ";
+//      if (!whereArgs.isEmpty()) whereArgs += " and ";
 
       if (table->is_intersect_operator(i)) {
         intersect_type = table->get_intersect_type(i).split("_")[0];
@@ -1297,7 +1487,7 @@ QString MainWindow::sql_string_builder(FilterOptionFactory *table,
         }
 
         if (intersect_type == SQLiteHandler::COLUMN_NAME_RESISTANCE_VALUE) {
-          whereArgs += table->getSqlResistanceIntersect(i, main_alias, SRAlias, sr_threshold, id_threshold);
+          whereArgs += table->getSqlResistanceIntersect(i, main_alias, SRAlias, breakThreshold, id_threshold);
 //          whereArgs += table->getSqlResistanceIntersect_V2(i, main_alias, intersect_weight, id_threshold);
 
           SRjoin.push_back(true);
@@ -1315,7 +1505,8 @@ QString MainWindow::sql_string_builder(FilterOptionFactory *table,
           }
         }
         else if (intersect_type == SQLiteHandler::COLUMN_NAME_SUPPORT_VALUE) {
-          whereArgs += table->getSqlSupportIntersect(i, main_alias, SRAlias, sr_threshold, id_threshold);
+          whereArgs += table->getSqlSupportIntersect(i, main_alias, SRAlias, breakThreshold, id_threshold);
+
           SRjoin.push_back(false);
 
           QString support_table;
@@ -1331,12 +1522,31 @@ QString MainWindow::sql_string_builder(FilterOptionFactory *table,
           }
         }
         else {
-          whereArgs += table->getSqlPriceIntersect(i, main_alias, canonical_alias, avg_threshold);
+          whereArgs += table->getSqlPriceIntersect(i, main_alias, canonical_alias, avgThreshold);
         }
       }
       else {
-        whereArgs += table->getSqlString(i, id_threshold, main_alias); // XX
+        QString intersectTableAlias;
+        IntervalWeight _w = BarDataAdapter::getIntervalWeightFromName( table->getSecondOperatorText(i) );
+
+        if (_w == main_intervalweight) {
+          intersectTableAlias = "A";
+        } else {
+          switch (_w) {
+            case WEIGHT_MONTHLY: intersectTableAlias = "R3"; break;
+            case WEIGHT_WEEKLY: intersectTableAlias = "R2"; break;
+            case WEIGHT_DAILY: intersectTableAlias = "R1"; break;
+            case WEIGHT_60MIN: intersectTableAlias = "R4"; break;
+            case WEIGHT_5MIN: intersectTableAlias = "R5"; break;
+            case WEIGHT_1MIN: intersectTableAlias = ""; break;
+            default: intersectTableAlias = ""; break;
+          }
+        }
+
+        whereArgs += table->getSqlString(i, id_threshold, main_alias, intersectTableAlias);
       }
+
+      whereArgs += table->getSqlConditionRow(i);
     }
   }
 
@@ -1659,6 +1869,12 @@ QSqlQuery* MainWindow::local_getSqlQuery() {
 }
 
 void MainWindow::on_btnSearch_clicked() {
+
+  if ( !filter->validate_block() ) {
+    QMessageBox::information(this, "Information", "Please check your input block condition");
+    return;
+  }
+
   enable_components(false);
   initialize(false); // reload config
   label_query_result.setText("Executing query. Please wait..");
@@ -1675,7 +1891,7 @@ void MainWindow::on_btnSearch_clicked() {
   const IntervalWeight base_weight_const = filter->get_smallest_interval_weight_v2();
   const int id_threshold = ui->cbThreshold->currentData().toInt();
   const double sr_threshold = ui->cbThreshold->currentText().toDouble();
-  const double avg_threshold = ui->sbAvgThreshold->value();
+  const double avg_threshold = 0;
 
   QStringList databaseNames; // databaseName for attach database
   QStringList databaseAlias; // table alias for join
@@ -1750,7 +1966,9 @@ void MainWindow::on_btnSearch_clicked() {
     //
     sql_select = sql_string_builder(filter, symbol, &databaseNames, &databaseAlias,
                                     &projectionNames, matcher_rowid, projection_weight,
-                                    false, id_threshold, sr_threshold, avg_threshold);
+                                    false, id_threshold, sr_threshold, avg_threshold,
+                                    tid_macd, tid_rsi, tid_slowk, tid_slowd,
+                                    tid_cgf, tid_clf, tid_cgs, tid_cls);
 
     qDebug() << "\n" << sql_select;
 
@@ -1763,16 +1981,18 @@ void MainWindow::on_btnSearch_clicked() {
                                   databaseNames, databaseAlias, sql_select, projectionNames, false,
                                   list_interval_threshold[base_weight_const], SBAR_ID);
 
-    bool b = false;
-    m_main_database = _model_database;
-    m_projection_weight = &projection_weight;
-    m_databaseName = &databaseNames;
-    m_databaseAlias = &databaseAlias;
-    m_sql_select = &sql_select;
-    m_projectionNames = &projectionNames;
-    m_forwardOnly = &b;
-    m_prevbar_count = &list_interval_threshold[base_weight_const];
-    m_srmodel = *_srmodel;
+
+//    bool b = false;
+//    m_main_database = _model_database;
+//    m_projection_weight = &projection_weight;
+//    m_databaseName = &databaseNames;
+//    m_databaseAlias = &databaseAlias;
+//    m_sql_select = &sql_select;
+//    m_projectionNames = &projectionNames;
+//    m_forwardOnly = &b;
+//    m_prevbar_count = &list_interval_threshold[base_weight_const];
+//    m_srmodel = *_srmodel;
+
     if (projection_weight == base_weight_const) { m_table = ui->tblData; }
     else if (projection_weight == WEIGHT_5MIN) { m_table = ui->tblData_5min; }
     else if (projection_weight == WEIGHT_60MIN) { m_table = ui->tblData_60min; }
@@ -1784,10 +2004,7 @@ void MainWindow::on_btnSearch_clicked() {
 //    QtConcurrent::run(this, &MainWindow::local_getSqlQuery);
 //    this->model_database = QSqlDatabase();
 //    future.waitForFinished();
-
 //    *model_query = future.result();
-
-    //////////////////////////////      //////////////////////////////    //////////////////////////////
 
     *_srmodel = new SRModel(sr_threshold);
     (*_srmodel)->setQuery(**_model_query);
@@ -1797,27 +2014,27 @@ void MainWindow::on_btnSearch_clicked() {
 
     if (projection_weight == base_weight_const) {
       ui->tblData->setModel(*_srmodel);
-      set_table_view(ui->tblData);
+      set_table_view(ui->tblData, base_weight_const, projection_weight);
     }
     else if (projection_weight == WEIGHT_5MIN) {
       ui->tblData_5min->setModel(*_srmodel);
-      set_table_view(ui->tblData_5min);
+      set_table_view(ui->tblData_5min, base_weight_const, projection_weight);
     }
     else if (projection_weight == WEIGHT_60MIN) {
       ui->tblData_60min->setModel(*_srmodel);
-      set_table_view(ui->tblData_60min);
+      set_table_view(ui->tblData_60min, base_weight_const, projection_weight);
     }
     else if (projection_weight == WEIGHT_DAILY) {
       ui->tblData_Daily->setModel(*_srmodel);
-      set_table_view(ui->tblData_Daily);
+      set_table_view(ui->tblData_Daily, base_weight_const, projection_weight);
     }
     else if (projection_weight == WEIGHT_WEEKLY) {
       ui->tblData_Weekly->setModel(*_srmodel);
-      set_table_view(ui->tblData_Weekly);
+      set_table_view(ui->tblData_Weekly, base_weight_const, projection_weight);
     }
     else if (projection_weight == WEIGHT_MONTHLY) {
       ui->tblData_Monthly->setModel(*_srmodel);
-      set_table_view(ui->tblData_Monthly);
+      set_table_view(ui->tblData_Monthly, base_weight_const, projection_weight);
     }
 
     if ((*_srmodel)->rowCount() > 0) {
@@ -1836,16 +2053,19 @@ void MainWindow::on_btnSearch_clicked() {
     //
     if (enable_sync_result) {
       if (projection_weight != base_weight_const) {
+
         sql_select_projection = sql_string_builder(filter, symbol, &ts_databaseNames, &ts_databaseAlias,
-          &ts_projectionNames, matcher_rowid, projection_weight, true, id_threshold, sr_threshold, avg_threshold);
+          &ts_projectionNames, matcher_rowid, projection_weight, true, id_threshold, sr_threshold, avg_threshold,
+          tid_macd, tid_rsi, tid_slowk, tid_slowd, tid_cgf, tid_clf, tid_cgs, tid_cls);
 
 //        qDebug() << "----- WTF Query ------";
 //        qDebug() << sql_select_projection;
 
         QSqlDatabase database1 = SQLiteHandler::clone_database(*_model_database);
-        QSqlQuery *query_clone = sqlitedb.getSqlQuery(database1, base_weight_const, projection_weight, id_threshold,
-                                                sr_threshold, ts_databaseNames, ts_databaseAlias, sql_select_projection,
-                                                QStringList(), true, list_interval_threshold[base_weight_const], SBAR_ID);
+        QSqlQuery *query_clone =
+            sqlitedb.getSqlQuery(database1, base_weight_const, projection_weight, id_threshold,
+              sr_threshold, ts_databaseNames, ts_databaseAlias, sql_select_projection,
+              QStringList(), true, list_interval_threshold[base_weight_const], SBAR_ID);
 
         export_result_to_file(symbol, SQLiteHandler::get_interval_name(projection_weight), query_clone, database1, true);
 
@@ -1861,8 +2081,6 @@ void MainWindow::on_btnSearch_clicked() {
 
     SQLiteHandler::removeDatabase(&this->model_database);
 
-    //////////////////////////////    //////////////////////////////        //////////////////////////////
-
     databaseNames.clear();
     databaseAlias.clear();
     projectionNames.clear();
@@ -1873,6 +2091,7 @@ void MainWindow::on_btnSearch_clicked() {
   enable_components(true);
 }
 
+// TODO:
 void MainWindow::on_btnExport_clicked() {
   if (model_query == NULL) {
     QMessageBox::information(this, "Information", "There's nothing to export.");
@@ -1887,25 +2106,12 @@ void MainWindow::on_btnExport_clicked() {
   //
   // Write Search Condition
   //
-  int N = filter->length();
-  QString condition_text = "";
-  condition_text += "SYMBOL=" + ui->cbSymbol->currentText() + "\r\n";
-  condition_text += "SR_THRESHOLD=" + ui->cbThreshold->currentText() + "\r\n";
-  for (int i = 0; i < N; ++i) {
-    condition_text += "CONDITION=" + filter->getConditionString(i) + "\r\n";
-  }
-
-  QFile file(filename_parse + " (Conditions).txt");
-  if (file.open(QFile::WriteOnly)) {
-    QTextStream stream(&file);
-    stream << condition_text;
-  }
-  file.close();
+  saveSearchConditions( filename_parse + " (Conditions).txt" );
 
   //
   // Write Search Result
   //
-  QQueue<QFuture<void>> queue;
+  QList<QFuture<void>> queue;
   QFuture<void> future;
   QStringList projection;
   QStringList filterList;
@@ -2013,18 +2219,29 @@ void MainWindow::on_btnExport_clicked() {
 
     fname = filename_parse + " (" + SQLiteHandler::get_interval_name(interval) + ").csv";
     future = QtConcurrent::run(&BarDataAdapter::export_result_to_csv,*model_query, sql_select, fname);
-    queue.append(future);
-
+    queue.push_back(future);
     interval = SQLiteHandler::get_parent_interval(interval);
   }
 
-  for (int i = 0; !queue.isEmpty() && i < queue.size(); ) {
-    if (queue[i].isFinished()) {
-      queue.removeAt(i);
-      QThread::msleep(250);
-      continue;
+  //
+  // TODO: fix last remove queue item
+  //
+  for (int i = 0; !queue.isEmpty(); ) {
+    if ( i < queue.size() && queue[i].isFinished() ) {
+//      qDebug() << "removeAt" << i << queue.size() << queue[i].isFinished();
+      if (queue.size() == 1) {
+//        queue[i].waitForFinished();
+        break;
+//        queue.removeAt(i);
+//        queue.clear();
+      }
+      else {
+        queue.removeAt(i);
+//        qDebug() << "isFinished?" << queue[i].isFinished() << i << queue.size();
+      }
     }
-    i = i < queue.size()? i + 1: 0;
+    i = (i + 1) % queue.size();
+    QThread::msleep(100);
   }
 
   QMessageBox::information(this, "Information", "Export complete");
@@ -2037,28 +2254,47 @@ void MainWindow::openSearchConditions(const QString &filename) {
     QTextStream stream(&file);
     QStringList line;
     int i = 0;
+    bool b = true;
 
-    while (!stream.atEnd()) {
+    // remove all rows
+    while ( filter->length() > 0 ) {
+      filter->removeAt(0);
+    }
+
+    while ( !stream.atEnd() ) {
       line = stream.readLine().split("=");
-      if (line[0] == "SYMBOL") {
-        ui->cbSymbol->setCurrentText(line[1]);
-      }
-      else if (line[0] == "SR_THRESHOLD") {
-        ui->cbThreshold->setCurrentText(line[1]);
-      }
-      else if (line[0] == "CONDITION") {
-        // append new row if less configured condition
-        if (filter->length()-1 < i) {
+
+      if ( line[0] == "SYMBOL" ) ui->cbSymbol->setCurrentText(line[1]);
+      else if ( line[0] == "SR_THRESHOLD" ) ui->cbThreshold->setCurrentText(line[1]);
+      else if ( line[0] == "MACD_THRESHOLD" ) tid_macd = line[1].toInt();
+      else if ( line[0] == "RSI_THRESHOLD" ) tid_rsi = line[1].toInt();
+      else if ( line[0] == "SLOWK_THRESHOLD" ) tid_slowk = line[1].toInt();
+      else if ( line[0] == "SLOWD_THRESHOLD" ) tid_slowd = line[1].toInt();
+      else if ( line[0] == "CLF_THRESHOLD" ) tid_clf = line[1].toInt();
+      else if ( line[0] == "CGF_THRESHOLD" ) tid_cgf = line[1].toInt();
+      else if ( line[0] == "CLS_THRESHOLD" ) tid_cls = line[1].toInt();
+      else if ( line[0] == "CGS_THRESHOLD" ) tid_cgs = line[1].toInt();
+      else if ( line[0] == "CONDITION" ) {
+
+        // refresh once - before parse CONDITION
+        if ( b ) {
+          refresh_threshold_component();
+          b = false;
+        }
+
+        // append new row if less than configured condition
+        if ( filter->length() - 1 < i ) {
           filter->insertAt(i);
         }
+
         // override row condition
         filter->setConditionString(i++, line[1].split(","));
       }
     }
 
     // remove surplus rows
-    while (i < filter->length()) {
-      filter->removeAt(filter->length()-1);
+    while ( i < filter->length() ) {
+      filter->removeAt( filter->length() - 1 );
     }
   }
 
@@ -2069,6 +2305,14 @@ void MainWindow::saveSearchConditions(const QString &filename) {
   QString condition_text = "";
   condition_text += "SYMBOL=" + ui->cbSymbol->currentText() + "\r\n";
   condition_text += "SR_THRESHOLD=" + ui->cbThreshold->currentText() + "\r\n";
+  condition_text += "MACD_THRESHOLD=" + QString::number(tid_macd) + "\r\n";
+  condition_text += "RSI_THRESHOLD=" + QString::number(tid_rsi) + "\r\n";
+  condition_text += "SLOWK_THRESHOLD=" + QString::number(tid_slowk) + "\r\n";
+  condition_text += "SLOWD_THRESHOLD=" + QString::number(tid_slowd) + "\r\n";
+  condition_text += "CLF_THRESHOLD=" + QString::number(tid_clf) + "\r\n";
+  condition_text += "CGF_THRESHOLD=" + QString::number(tid_cgf) + "\r\n";
+  condition_text += "CLS_THRESHOLD=" + QString::number(tid_cls) + "\r\n";
+  condition_text += "CGS_THRESHOLD=" + QString::number(tid_cgs) + "\r\n";
 
   int N = filter->length();
   for (int i = 0; i < N; ++i) {
@@ -2090,8 +2334,6 @@ void MainWindow::saveSearchConditions(const QString &filename) {
 //
 void MainWindow::clear_model() {
   if (srmodel != NULL) {
-    qDebug() << "Clear model..";
-
     delete model_query;
     delete model_query_monthly;
     delete model_query_weekly;
@@ -2144,8 +2386,8 @@ void MainWindow::clear_program_result(const QString &symbol) {
   }
 }
 
-void MainWindow::export_result_to_file(const QString &symbol, const QString &interval,
-    QSqlQuery *query, const QSqlDatabase &dbQuery, const bool &delete_flag) {
+void MainWindow::export_result_to_file(const QString &symbol, const QString &interval, QSqlQuery *query,
+                                       const QSqlDatabase &dbQuery, const bool &delete_flag) {
   QString filename = result_dir + "/" + symbol + "_" + interval + "." + QString::number(SBAR_ID)+ ".sbar";
   mutex.lock();
   thread_pool->start(new SearchResultWriter(query, filename, dbQuery, delete_flag), QThread::NormalPriority);
@@ -2204,6 +2446,47 @@ void MainWindow::prepare_database_update_flag() {
   }
 }
 
+inline QString concat_threshold_value(const QString &op, const QString &value) {
+  if (value.toDouble() == 0) return "";
+  return op + BarDataAdapter::remove_trailing_zero(value);
+}
+
+void MainWindow::refresh_threshold_component() {
+  QString symbol = ui->cbSymbol->currentText();
+  QString macd_v1 = QString::number( t_macd[ tid_macd - 1 ].value1 );
+  QString macd_v2 = QString::number(t_macd[ tid_macd - 1 ].value2);
+  QString rsi_v1 = QString::number(t_rsi[ tid_rsi - 1 ].value1);
+  QString rsi_v2 = QString::number(t_rsi[ tid_rsi - 1 ].value2);
+  QString slowk_v1 = QString::number(t_slowk[ tid_slowk - 1 ].value1);
+  QString slowk_v2 = QString::number(t_slowk[ tid_slowk - 1 ].value2);
+  QString slowd_v1 = QString::number(t_slowd[ tid_slowd - 1 ].value1);
+  QString slowd_v2 = QString::number(t_slowd[ tid_slowd - 1 ].value2);
+  QString cgf = "C > F" + concat_threshold_value( "-" , t_cgf[symbol][ tid_cgf ].value );
+  QString clf = "C < F" + concat_threshold_value( "+" , t_clf[symbol][ tid_clf ].value );
+  QString cgs = "C > S" + concat_threshold_value( "-" , t_cgs[symbol][ tid_cgs ].value );
+  QString cls = "C < S" + concat_threshold_value( "+" , t_cls[symbol][ tid_cls ].value );
+
+  filter->set_macd_threshold( tid_macd ); // pass non-zero based
+  filter->set_rsi_threshold( tid_rsi );
+  filter->set_slowk_threshold( tid_slowk );
+  filter->set_slowd_threshold( tid_slowd );
+  filter->set_cgf_threshold( tid_cgf ); // zero-based
+  filter->set_clf_threshold( tid_clf );
+  filter->set_cgs_threshold( tid_cgs );
+  filter->set_cls_threshold( tid_cls );
+  filter->refresh_column_name(symbol);
+
+  label_threshold_params.setText(
+    "(MACD: " + macd_v1 + "/" + macd_v2 + ") "
+    "(RSI: " + rsi_v1 + "/" + rsi_v2 + ") "
+    "(SlowK: " + slowk_v1 + "/" + slowk_v2 + ") "
+    "(SlowD: " + slowd_v1 + "/" + slowd_v2 + ") " +
+    ((clf.length() > 5)? "(" + clf + ") " : "") +
+    ((cgf.length() > 5)? "(" + cgf + ") " : "") +
+    ((cls.length() > 5)? "(" + cls + ") " : "") +
+    ((cgs.length() > 5)? "(" + cgs + ") " : "") );
+}
+
 void MainWindow::set_threshold_parameters(const QString &symbol) {
   QString _symbol = symbol;
 
@@ -2212,16 +2495,17 @@ void MainWindow::set_threshold_parameters(const QString &symbol) {
   }
 
   QString display_text;
-  list_threshold = XmlConfigHandler::get_instance()->get_list_threshold();
-  list_interval_weight = XmlConfigHandler::get_instance()->get_interval_weight();
-  list_interval_threshold = XmlConfigHandler::get_instance()->get_interval_threshold();
-  QVector<XmlConfigHandler::t_threshold> vec = list_threshold[_symbol];
+  XmlConfigHandler *config = XmlConfigHandler::get_instance();
+  list_threshold = config->get_list_threshold();
+  list_interval_weight = config->get_interval_weight();
+  list_interval_threshold = config->get_interval_threshold();
+  QVector<XmlConfigHandler::t_sr_threshold> vec = list_threshold[_symbol];
 
   ui->cbThreshold->clear();
   for (int i = 0; i < vec.length(); ++i) {
-    if (vec[i].threshold != 0 && vec[i].b != 0) {
-      display_text = QString::number(vec[i].b);
-      ui->cbThreshold->addItem(display_text, vec[i].index);
+    if (vec[i].test_point != 0 && vec[i].break_threshold != 0) {
+      display_text = QString::number(vec[i].break_threshold);
+      ui->cbThreshold->addItem(display_text, vec[i].t_id);
     }
   }
 }
@@ -2308,104 +2592,143 @@ void MainWindow::set_data_range_label() {
   }
 }
 
-void MainWindow::set_table_view(QTableView *table) {
-  int MAX_WIDTH_1 = 56;
-  int MAX_WIDTH_2 = 65;
-  int MAX_WIDTH_3 = 80;
-  int MAX_WIDTH_4 = 85;
-  int MAX_WIDTH_5 = 100;
-  table->setColumnWidth(0, 70); // date
-  table->setColumnWidth(1, 40); // time
-  table->setColumnWidth(2, MAX_WIDTH_1);
-  table->setColumnWidth(3, MAX_WIDTH_1);
-  table->setColumnWidth(4, MAX_WIDTH_1);
-  table->setColumnWidth(5, MAX_WIDTH_1);
-  table->setColumnWidth(6, MAX_WIDTH_2);
-  table->setColumnWidth(7, MAX_WIDTH_2-5); // Volume
-  table->setColumnWidth(8, MAX_WIDTH_2);
-  table->setColumnWidth(9, MAX_WIDTH_2);
-  table->setColumnWidth(10, MAX_WIDTH_2); // MACD > 0
-  table->setColumnWidth(11, MAX_WIDTH_2);
-  table->setColumnWidth(12, MAX_WIDTH_3);
-  table->setColumnWidth(13, MAX_WIDTH_3);
-  table->setColumnWidth(14, MAX_WIDTH_2);
-  table->setColumnWidth(15, MAX_WIDTH_2);
-  table->setColumnWidth(16, MAX_WIDTH_2);
-  table->setColumnWidth(17, MAX_WIDTH_2);
-  table->setColumnWidth(18, MAX_WIDTH_2);
-  table->setColumnWidth(19, MAX_WIDTH_2);
-  table->setColumnWidth(20, MAX_WIDTH_2); // SlowK > 80
-  table->setColumnWidth(21, MAX_WIDTH_2);
-  table->setColumnWidth(22, MAX_WIDTH_2);
-  table->setColumnWidth(23, MAX_WIDTH_2);
-  table->setColumnWidth(24, MAX_WIDTH_2);
-  table->setColumnWidth(25, MAX_WIDTH_2);
-  table->setColumnWidth(26, MAX_WIDTH_2);
-  table->setColumnWidth(27, MAX_WIDTH_2); // FastAvg
-  table->setColumnWidth(28, MAX_WIDTH_2); // SlowAvg
-  table->setColumnWidth(29, MAX_WIDTH_2); // F-Slope
-  table->setColumnWidth(30, MAX_WIDTH_2); // S-Slope
-  table->setColumnWidth(31, MAX_WIDTH_2);
-  table->setColumnWidth(32, MAX_WIDTH_3);
-  table->setColumnWidth(33, MAX_WIDTH_2);
-  table->setColumnWidth(34, MAX_WIDTH_3);
-  table->setColumnWidth(35, MAX_WIDTH_2);
-  table->setColumnWidth(36, MAX_WIDTH_3);
-  table->setColumnWidth(37, MAX_WIDTH_2);
-  table->setColumnWidth(38, MAX_WIDTH_3);
-  table->setColumnWidth(39, MAX_WIDTH_2);
-  table->setColumnWidth(40, MAX_WIDTH_3); // Dist(L-F) (R)
-  table->setColumnWidth(41, MAX_WIDTH_2); // Dist(L-S)
-  table->setColumnWidth(42, MAX_WIDTH_3);
-  table->setColumnWidth(43, MAX_WIDTH_2);
-  table->setColumnWidth(44, MAX_WIDTH_3);
-  table->setColumnWidth(45, MAX_WIDTH_2);
-  table->setColumnWidth(46, MAX_WIDTH_3);
-  table->setColumnWidth(47, MAX_WIDTH_2);
-  table->setColumnWidth(48, MAX_WIDTH_3);
-  table->setColumnWidth(49, MAX_WIDTH_4); // Dist(F-S) Cross
-  table->setColumnWidth(50, MAX_WIDTH_5); // Dist(F-S) Cross (R)
-  table->setColumnWidth(51, 50); // F > S
-  table->setColumnWidth(52, 50);
-  table->setColumnWidth(53, MAX_WIDTH_2);
-  table->setColumnWidth(54, MAX_WIDTH_2);
-  table->setColumnWidth(55, 50);
-  table->setColumnWidth(56, 50);
-  table->setColumnWidth(57, MAX_WIDTH_2);
-  table->setColumnWidth(58, MAX_WIDTH_2);
-  table->setColumnWidth(59, 50);
-  table->setColumnWidth(60, 50);
-  table->setColumnWidth(61, MAX_WIDTH_2); // C > S (R)
-  table->setColumnWidth(62, MAX_WIDTH_2);
-  table->setColumnWidth(63, MAX_WIDTH_2);
-  table->setColumnWidth(64, MAX_WIDTH_2);
-  table->setColumnWidth(65, MAX_WIDTH_2);
-  table->setColumnWidth(66, MAX_WIDTH_3); // Downtail (R)
-  table->setColumnWidth(67, MAX_WIDTH_2);
-  table->setColumnWidth(68, MAX_WIDTH_2);
-  table->setColumnWidth(69, MAX_WIDTH_3); // TotalLength
-  table->setColumnWidth(70, MAX_WIDTH_4); // TotalLength (R)
-  table->setColumnWidth(71, MAX_WIDTH_4); // Resistance (D)
-  table->setColumnWidth(72, MAX_WIDTH_4); // DistResistance
-  table->setColumnWidth(73, MAX_WIDTH_5); // DistResistance (R)
-  table->setColumnWidth(74, MAX_WIDTH_4); // Support (D)
-  table->setColumnWidth(75, MAX_WIDTH_3); // DistSupport
-  table->setColumnWidth(76, MAX_WIDTH_4); // DistSupport (R)
-  table->setColumnWidth(77, MAX_WIDTH_2); // F-Cross
-  table->setColumnWidth(78, MAX_WIDTH_2); // S-Cross
-  table->setColumnWidth(79, MAX_WIDTH_2+5); // Zone
+void MainWindow::set_table_view(QTableView *table, const IntervalWeight &base_interval, const IntervalWeight &projection_interval) {
+  static const int MAX_WIDTH_1 = 56;
+  static const int MAX_WIDTH_2A = 60;
+  static const int MAX_WIDTH_2B = 65;
+  static const int MAX_WIDTH_2C = 70;
+  static const int MAX_WIDTH_3 = 80;
+  static const int MAX_WIDTH_4 = 85;
+  static const int MAX_WIDTH_4B = 90;
+  static const int MAX_WIDTH_5 = 100;
+  static const int MAX_WIDTH_6 = 110;
+  int m_index = 0;
 
-  int N = table->model()->columnCount();
+  table->setColumnWidth(m_index++, 70); // date
+  table->setColumnWidth(m_index++, 40); // time
+  table->setColumnWidth(m_index++, MAX_WIDTH_1);
+  table->setColumnWidth(m_index++, MAX_WIDTH_1);
+  table->setColumnWidth(m_index++, MAX_WIDTH_1);
+  table->setColumnWidth(m_index++, MAX_WIDTH_1);
+  table->setColumnWidth(m_index++, MAX_WIDTH_2B);
+  table->setColumnWidth(m_index++, MAX_WIDTH_2A); // Volume
+  table->setColumnWidth(m_index++, MAX_WIDTH_2C); // MACD
+  table->setColumnWidth(m_index++, MAX_WIDTH_2B);
+  // 10
+  table->setColumnWidth(m_index++, MAX_WIDTH_2B); // MACD < 0
+  table->setColumnWidth(m_index++, MAX_WIDTH_3);  // MACD < 0 (R)
+  table->setColumnWidth(m_index++, MAX_WIDTH_2B); // MACD > 0
+  table->setColumnWidth(m_index++, MAX_WIDTH_3);  // MACD > 0 (R)
+  table->setColumnWidth(m_index++, MAX_WIDTH_2C); // MACDAvg
+  table->setColumnWidth(m_index++, MAX_WIDTH_2C); // MACDDiff
+  table->setColumnWidth(m_index++, MAX_WIDTH_2B);
+  table->setColumnWidth(m_index++, MAX_WIDTH_2B); // RSI < 30
+  table->setColumnWidth(m_index++, MAX_WIDTH_2C);
+  table->setColumnWidth(m_index++, MAX_WIDTH_2B); // RSI > 70
+  // 20
+  table->setColumnWidth(m_index++, MAX_WIDTH_2C);
+  table->setColumnWidth(m_index++, MAX_WIDTH_2B); // SlowK
+  table->setColumnWidth(m_index++, MAX_WIDTH_2B); // SlowK < 20
+  table->setColumnWidth(m_index++, MAX_WIDTH_4B);
+  table->setColumnWidth(m_index++, MAX_WIDTH_2B); // SlowK > 80
+  table->setColumnWidth(m_index++, MAX_WIDTH_4B);
+  table->setColumnWidth(m_index++, MAX_WIDTH_2B); // SlowD
+  table->setColumnWidth(m_index++, MAX_WIDTH_2B); // SlowD < 20
+  table->setColumnWidth(m_index++, MAX_WIDTH_4B);
+  table->setColumnWidth(m_index++, MAX_WIDTH_2B); // SlowD > 80
+  table->setColumnWidth(m_index++, MAX_WIDTH_4B);
+
+  if (base_interval < WEIGHT_DAILY && projection_interval == WEIGHT_DAILY) {
+    table->setColumnWidth(m_index++, MAX_WIDTH_2B); // PrevDailyATR
+  }
+  table->setColumnWidth(m_index++, MAX_WIDTH_2B); // ATR
+  table->setColumnWidth(m_index++, MAX_WIDTH_2B); // ATR (R)
+  table->setColumnWidth(m_index++, MAX_WIDTH_2B); // FastAvg
+  table->setColumnWidth(m_index++, MAX_WIDTH_2B); // SlowAvg
+
+  if (base_interval < WEIGHT_DAILY && projection_interval == WEIGHT_DAILY) {
+    table->setColumnWidth(m_index++, MAX_WIDTH_2B); // Day-10 (F)
+    table->setColumnWidth(m_index++, MAX_WIDTH_2B); // Day-50 (F)
+  }
+
+  table->setColumnWidth(m_index++, MAX_WIDTH_2B); // F-Slope
+  table->setColumnWidth(m_index++, MAX_WIDTH_2B); // S-Slope
+  table->setColumnWidth(m_index++, MAX_WIDTH_2B); // Dist(O-F)
+  table->setColumnWidth(m_index++, MAX_WIDTH_3);
+  table->setColumnWidth(m_index++, MAX_WIDTH_2B); // Dist(H-F)
+  table->setColumnWidth(m_index++, MAX_WIDTH_3);
+  table->setColumnWidth(m_index++, MAX_WIDTH_2B); // Dist(L-F)
+  table->setColumnWidth(m_index++, MAX_WIDTH_3);
+  table->setColumnWidth(m_index++, MAX_WIDTH_2B); // Dist(C-F)
+  table->setColumnWidth(m_index++, MAX_WIDTH_3);
+  table->setColumnWidth(m_index++, MAX_WIDTH_2B); // Dist(O-S)
+  table->setColumnWidth(m_index++, MAX_WIDTH_3);
+  table->setColumnWidth(m_index++, MAX_WIDTH_2B); // Dist(H-S)
+  table->setColumnWidth(m_index++, MAX_WIDTH_3);
+  table->setColumnWidth(m_index++, MAX_WIDTH_2B); // Dist(L-S)
+  table->setColumnWidth(m_index++, MAX_WIDTH_3);
+  table->setColumnWidth(m_index++, MAX_WIDTH_2B); // Dist(C-S)
+  table->setColumnWidth(m_index++, MAX_WIDTH_3);
+  table->setColumnWidth(m_index++, MAX_WIDTH_2B); // Dist(F-S)
+  table->setColumnWidth(m_index++, MAX_WIDTH_3);
+  table->setColumnWidth(m_index++, MAX_WIDTH_4 +5); // Dist(F-S) Cross
+  table->setColumnWidth(m_index++, MAX_WIDTH_6 +5); // Dist(F-S) Cross (ATR)
+  table->setColumnWidth(m_index++, MAX_WIDTH_5 +5); // Dist(F-S) Cross (R)
+  table->setColumnWidth(m_index++, 50);           // F < S
+  table->setColumnWidth(m_index++, MAX_WIDTH_2B); // F < S (R)
+  table->setColumnWidth(m_index++, 50);
+  table->setColumnWidth(m_index++, MAX_WIDTH_2B); // F > S (R)
+  table->setColumnWidth(m_index++, 70);
+  table->setColumnWidth(m_index++, MAX_WIDTH_4);
+  table->setColumnWidth(m_index++, 70);
+  table->setColumnWidth(m_index++, MAX_WIDTH_4);
+  table->setColumnWidth(m_index++, 70);
+  table->setColumnWidth(m_index++, MAX_WIDTH_4); // C < S (R)
+  table->setColumnWidth(m_index++, 70);          // C > S
+  table->setColumnWidth(m_index++, MAX_WIDTH_4); // C > S (R)
+  table->setColumnWidth(m_index++, MAX_WIDTH_2B); // Uptail
+  table->setColumnWidth(m_index++, MAX_WIDTH_2B);
+  table->setColumnWidth(m_index++, MAX_WIDTH_2B);
+  table->setColumnWidth(m_index++, MAX_WIDTH_3); // Downtail
+  table->setColumnWidth(m_index++, MAX_WIDTH_3);
+  table->setColumnWidth(m_index++, MAX_WIDTH_3);
+  // 70
+  table->setColumnWidth(m_index++, MAX_WIDTH_2B); // Body
+  table->setColumnWidth(m_index++, MAX_WIDTH_2B);
+  table->setColumnWidth(m_index++, MAX_WIDTH_2B);
+  table->setColumnWidth(m_index++, MAX_WIDTH_3); // TotalLength
+  table->setColumnWidth(m_index++, MAX_WIDTH_4);
+  table->setColumnWidth(m_index++, MAX_WIDTH_4);
+  table->setColumnWidth(m_index++, MAX_WIDTH_4); // Resistance (D)
+  table->setColumnWidth(m_index++, MAX_WIDTH_4);
+  table->setColumnWidth(m_index++, MAX_WIDTH_6);
+  table->setColumnWidth(m_index++, MAX_WIDTH_5);
+  // 80
+  table->setColumnWidth(m_index++, MAX_WIDTH_3); // Support (D)
+  table->setColumnWidth(m_index++, MAX_WIDTH_3);
+  table->setColumnWidth(m_index++, MAX_WIDTH_5);
+  table->setColumnWidth(m_index++, MAX_WIDTH_4);
+
+  if ( table->model()->headerData(m_index, Qt::Horizontal) == "DateRange" ) {
+    table->setColumnWidth(m_index++, MAX_WIDTH_2C); // DateRange
+  }
+
+  table->setColumnWidth(m_index++, MAX_WIDTH_1); // F-Cross
+  table->setColumnWidth(m_index++, MAX_WIDTH_1); // S-Cross
+  table->setColumnWidth(m_index++, MAX_WIDTH_2C +5); // Zone
+
   QString column_name;
+  int N = table->model()->columnCount();
 
-  for (int i = 80; i < N; ++i) {
+  for (int i = m_index; i < N; ++i) {
     column_name = table->model()->headerData(i, Qt::Horizontal).toString();
-    if (!column_name.startsWith("Zone") && !column_name.endsWith("(#)")) break;
+
+    if (!column_name.contains("Zone") && !column_name.endsWith("(#)")) break;
 
     if (column_name.endsWith("(#)")) {
-      table->setColumnWidth(i, MAX_WIDTH_3+5); // Resistance (#)/ Support (#)
+      table->setColumnWidth(i, MAX_WIDTH_3); // Resistance (#)/ Support (#)
     } else {
-      table->setColumnWidth(i, MAX_WIDTH_2+5); // Zone
+      table->setColumnWidth(i, MAX_WIDTH_4); // Zone
     }
   }
 }
@@ -2449,7 +2772,6 @@ void MainWindow::set_tab_widget_interval(const IntervalWeight &fromInterval) {
 
 void MainWindow::enable_components(const bool &flag) {
   is_enable_components = flag;
-  ui->sbAvgThreshold->setEnabled(flag);
   ui->btnClearResult->setEnabled(flag);
   ui->cbSymbol->setEnabled(flag);
   ui->cbThreshold->setEnabled(flag);
@@ -2458,7 +2780,6 @@ void MainWindow::enable_components(const bool &flag) {
   ui->btnSearch->setEnabled(flag);
   ui->btnSearch->blockSignals(!flag);
   ui->btnExport->setEnabled(flag);
-  ui->menuMenu->setEnabled(flag);
   ui->tableWidget->setEnabled(flag);
   ui->tabWidget->setEnabled(flag);
   if (!flag) {
@@ -2467,6 +2788,9 @@ void MainWindow::enable_components(const bool &flag) {
   }
 }
 
+QString MainWindow::getSymbol() const {
+  return ui->cbSymbol->currentText();
+}
 
 //
 // Intersect with hanci's Matcher Result
